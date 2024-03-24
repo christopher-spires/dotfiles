@@ -1,22 +1,41 @@
 # dotfiles
 :icons: font
 :toc: auto
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
 
 ## Overview
 
-This is very much focused on using Cygwin Bash in Windows. Git. Maven/Java.  Some of it is portable, some of it is not. Some of it will work in other Bash shells like Git Bash. Some of it relies on packages that are not available in Git Bash. YMMV.
+tl;dr: YMMV
 
-WARNING: This is very much a WIP. I had only recently discovered that others were managing/sharing dotfiles. I wasn't aware of any tools and I had my own hacked together using bare git but wasn't "sharable" (it had secrets). I kind of forced usage of `chezmoi` to see how far I could get.  I might refactor this solution to use `yadm` or `flow` if I continue to find `chezmoi` continues to be problematic.  `yadm` is largely a wrapper for `git` with some added features.  `flow` seems really simple but appears to rely on symlinks.
+This is very much focused on using Cygwin Bash in Windows. Some of it is portable, some of it is not. Some of it will work in other Bash shells like Git Bash and Linux. Some of it relies on packages that are not available in Git Bash. I find Git Bash is a bit more limited in options compared to Cygwin. I have also seen Git Bash behavior with az cli to be different than Cygwin.
+
+Other than Cygwin, my typical toolset is IntelliJ mixed in with some VS Code. Maven, Git, Vagrant. I tend to try to automate just about everything I can.
+
+I have only recently discovered Starship, but the simple fact it colors the prompt based on the exit code is what I oddly find the most useful about it.  The rest is gravy.
+
+[WARNING]
+====
+This is very much a WIP. Some stuff is probably missing and/or poorly documented.  Some of it is incomplete.
+
+I had only recently discovered that others were managing/sharing dotfiles. I wasn't aware of any tools and I had my own hacked together using bare git but wasn't "sharable" (it had secrets). I kind of forced usage of `chezmoi` to see how far I could get. This is the result of using it about 2-3 days.
+====
+
+It appears chezmoi is the more popular dotfile managers available ( https://dotfiles.github.io/utilities/ ), but it does not exactly play nice with Cygwin.  Alternatives that might prove easier to configure or may use out of the box include `yadm` and `flow`. Cygwin actually has a `flow` package that is available to install from the Cygwin installer, so I would expect that to be the most compatible with Cygwin.  But it does not appear to have the full feature set of `chezmoi` and `yadm`.
+
+I might refactor this solution to use `yadm` or `flow` if I continue to find `chezmoi` to be  problematic.  `yadm` is largely a wrapper for `git` with some added features, so it might play a lot better w/ Cygwin.  `flow` seems really simple but appears to rely on symlinks. Not a dealbreaker but initially avoiding it.
+
 
 ## chezmoi
 
-It appears chezmoi is the more popular dotfile managers available ( https://dotfiles.github.io/utilities/ ), but it does not exactly play nice with Cygwin.  Alternatives that might prove easier to configure or may use out of the box include `yadm` and `flow`. Cygwin actually has a `flow` package that is available to install from the Cygwin installer.
-
-
 chezmoi provides a comparison table with some other tools: https://www.chezmoi.io/comparison-table/
 
-
-NOTE: In the source examples, `cm` is an alias to `chezmoi`
+NOTE: In the source examples, `cm` is an alias to `chezmoi`. I also have a bash function that converts Cygwin/Linux path arguments to Windows.
 
 [source,bash]
 ----
@@ -25,7 +44,7 @@ alias cm='chezmoi'
 
 ### download/install
 
-Not the only way to install it, but it is is, afaik, availaible on windows 10/11 by default. It might require patches/upgrades to OS.  There are other install methods available. See https://www.chezmoi.io/
+Not the only way to install it, but it is, afaik, availaible on Windows 10/11 by default. It might require patches/upgrades to OS.  There are other install methods available. See https://www.chezmoi.io/install/
 
 [source,bash]
 ----
@@ -34,7 +53,7 @@ winget install twpayne.chezmoi
 
 ### Cygwin Config
 
-WARNING: It is not possible to output directly to chezmoi.json because `chezmoi dump-config`
+CAUTION: It is not possible to output directly to chezmoi.json because `chezmoi dump-config`
 attempts to read the config during output and errors out.
 
 NOTE: Json is the default format for dump-config.
@@ -44,9 +63,9 @@ I was able to create a config file from the default configuration and modify it.
 [source,bash]
 ----
 _config_dir=/c/Users/$USER/.config/chezmoi
-mkdir -p $_config_dir ~/.local/share/chezmoi ~/.cache/chezmoi
-cm dump-config | sed 's#/Users/#/cygwin64/home/#' > $_config_dir/chezmoi.dump.json
-mv $_config_dir/chezmoi.dump.json $_config_dir/chezmoi.json
+mkdir -p "$_config_dir" ~/.local/share/chezmoi ~/.cache/chezmoi
+cm dump-config | sed 's#/Users/#/cygwin64/home/#' > "$_config_dir/chezmoi.dump.json"
+mv "$_config_dir/chezmoi.dump.json" "$_config_dir/chezmoi.json"
 ----
 
 ### init/apply
@@ -67,7 +86,7 @@ cm completion bash > ~/.bash_completion.d/chezmoi-completion.bash
 
 The version at the time of writing this did not properly read yaml or toml configurations inside a Cygwin environment.  Json was the only config format that appeared to work.
 
-`cm cd` does not work.
+`cm cd` does not work. There may be a workaround by providing tweaking the `chezmoi.json` configuration file for the `cd` command.
 
 ----
 chezmoi: /bin/bash: exec: "/bin/bash": executable file not found in %PATH%
