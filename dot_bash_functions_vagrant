@@ -1,0 +1,40 @@
+#!/bin/bash
+function v() { vagrant "$@"; }
+complete -F _vagrant v
+
+function vnew() {
+  local command=$1
+  local COMMAND
+  case "$command" in
+   sc) COMMAND+=("ssh-config");;
+   b) COMMAND+=("box");;
+   bl) COMMAND+=("box" "list");;
+   h) COMMAND+=("halt");;
+   u) COMMAND+=("up");;
+   s) COMMAND+=("ssh");;
+   d) COMMAND+=("destroy");;
+   df) COMMAND+=("destroy" "--force");;
+   default)
+
+   ;;
+  esac
+
+}
+function vu() { v up "$@"; }
+function vp() { v provision "$@"; }
+# Ctrl-C appears to cause `vagrant ssh` to exit. Same behavior is not observed when using ssh directly.
+function vs() {
+  local ssh_args
+  # previous version of vagrant didn't use proper line endings and fails to ssh
+  # [[ -d .vagrant ]] && find .vagrant -name 'private_key' -print0 | xargs --null d2u -ic | xargs d2u4
+  # awk skips the first line && windows crlf -> unix lf && skips blank lines then prints -o <key>=<value>
+  mapfile -t ssh_args < <(vagrant ssh-config | awk 'NR > 1 && sub("\r$", "") && NF { print "-o\n"$1"="$2}')
+  ssh "${ssh_args[@]}" localhost "$@"
+}
+function vssh() { vs "$@"; }
+function vus() { vu "$@" && vs "$@"; }
+function vd() { v destroy "$@"; }
+function vdf() { vd -f "$@"; }
+function vstat() { v status "$@"; }
+function vb() { v box "$@"; }
+function vbl() { vb list "$@"; }

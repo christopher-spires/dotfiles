@@ -1,0 +1,289 @@
+#!/bin/bash
+
+function gadd() { git add "$@"; }
+___git_complete gadd _git_add
+function gb() { gbranch "$@"; }
+___git_complete gb _git_branch
+function gbl() { gbranch -l "$@"; }
+___git_complete gbl _git_branch
+function gbla() { gbranch -la "$@"; }
+___git_complete gbla _git_branch
+function gbranch() { git branch "$@"; }
+___git_complete gbranch _git_branch
+function gco() { git checkout "$@"; }
+___git_complete gco _git_checkout
+function gcommit() { git commit "$@"; }
+___git_complete gcommit _git_commit
+function gdiff() { git diff "$@"; }
+___git_complete gdiff _git_diff
+function gls() { git ls-files "$@"; }
+# list files that are modified
+# shellcheck disable=SC2120
+function glsm() { git ls-files -m "$@"; }
+# list files that are untracked by git
+# shellcheck disable=SC2120
+function glso() { git ls-files -o --exclude-standard "$@"; }
+function glsu() { git ls-files -u "$@"; }
+# list files that are added/staged for commit
+function glsa() { git diff --name-only --cached; }
+___git_complete glsa _git_diff
+function gmerge() { git mergetool "$@"; }
+___git_complete gmerge _git_mergetool
+function gpull() { git pull "$@"; }
+___git_complete gpull _git_pull
+function gpush() { git push "$@"; }
+___git_complete gpush _git_push
+function gstash() { git stash "$@"; }
+___git_complete gstash _git_stash
+function gstat() { gstatus "$@"; }
+___git_complete gstat _git_status
+function gstatus() { git status "$@"; }
+___git_complete gstatus _git_status
+function gwt() { git worktree "$@"; }
+___git_complete gwt _git_worktree
+function gwta() { git worktree add "$@" && gwthwt; }
+function gwtl() { git worktree list "$@"; }
+
+function gwtch() {
+  echo "git worktree clear history: remove worktree from git ls listing" > /dev/null
+  local wt="$1"
+  local topDir
+  topDir=$(git rev-parse --show-toplevel)
+  if [ -f "${topDir}/.git" ]; then topDir=$(realpath "$topDir/.."); fi
+  ignoreFile="$topDir/.git/info/exclude"
+  if git check-ignore "$wt" > /dev/null; then
+    # echo "cleaning: $wt"
+    sed -i "/^${wt}$/d" "$ignoreFile"
+  fi
+}
+
+function gwtr() {
+  # git worktree remove
+  local args=("$@")
+  for arg in "${args[@]}"; do
+    case $arg in
+     -f | --force) :
+     ;;
+     *)
+     gwtch "$arg"
+    esac
+  done
+  git worktree remove "$@";
+  [[ ! -d $PWD ]] && cd ..
+}
+
+function gwthwt() {
+  echo "git worktree hide worktrees: hide worktrees folder from git listing" > /dev/null
+  local allWorktrees ignoreFile
+  allWorktrees=$(git worktree list --porcelain)
+  
+  if [ "${#allWorktrees}" -le 0 ]; then return 0; fi
+  toplevel="$(git rev-parse --show-toplevel)"
+  ignoreFile="${toplevel}/.git/info/exclude"
+  
+  while read -r line; do
+    key=${line% *}
+    case $key in
+      worktree*)
+        wtPath=${line#* }
+        if [ "$wtPath" == "$toplevel" ]; then continue; fi
+        # wt=$( echo "$wtPath" | xargs basename)
+        wt=${wtPath##*/}
+        if ! git check-ignore "$wt" > /dev/null; then
+          echo "hiding: $wt"
+          echo "$wt" >> "$ignoreFile"
+        fi
+      ;;
+      *)
+        # echo "ignoring others"
+      ;;
+    esac      
+  done <<< "${allWorktrees[@]}"
+}
+
+function gwtcd() {
+  local cdBranch=$1
+  allWorktrees=$(git worktree list --porcelain | grep -e ^worktree -e ^branch )
+  while read -r line; do
+    key=${line% *}
+    value=${line#* }
+    case $key in
+      worktree*)
+        wt=$value
+      ;;
+      branch*)
+        branchName="${value//refs\/heads\//}"
+      ;;
+      *)
+        # echo "ignoring others"
+      ;;
+    esac
+    if [ "${branchName}" == "${cdBranch}" ]; then cd "$wt" || return 1; return; fi
+  done <<< "${allWorktrees[@]}"  
+}
+
+function gwts() { cdwt; }
+
+function cdwt() {
+  # set -x
+  echo "git worktree select: UI to select the existing worktrees with some management options" > /dev/null
+  local wt allWorktrees wt keyValue wtMaxLength branchMaxLength currentbranch
+  wtMaxLength=0
+  branchMaxLength=0
+  name="(c)d/[ENTER] | (r)remove | (q)uit"
+  while : ; do
+    unset keyValue
+    declare -A keyValue
+    currentbranch=$(git branch --show-current)
+    allWorktrees=$(git worktree list --porcelain | grep -e ^worktree -e ^branch )
+    if [ "${#allWorktrees}" -le 0 ]; then return 1; fi
+    while read -r line; do
+      key=${line% *}
+      value=${line#* }
+      case $key in
+        worktree*)
+          wt=$value
+          wtLength=${#wt}
+          wtMaxLength=$(( wtLength > wtMaxLength ? wtLength : wtMaxLength ))
+        ;;
+        branch*)
+          branchName="${value//refs\/heads\//}"
+          keyValue["$branchName"]="$wt"
+          branchLength=${#branchName}
+          branchMaxLength=$(( branchLength > branchMaxLength ? branchLength : branchMaxLength ))
+        ;;
+        *)
+          # echo "ignoring others"
+        ;;
+      esac
+    done <<< "${allWorktrees[@]}"
+
+    [[ "${#keyValue[@]}" -le 1 ]] && echo "no worktress" && return 1;
+
+    local BRANCH_INDEX=1
+    local branchNumber=0
+    mapfile -t sortedBranchName < <( for branchName in "${!keyValue[@]}"; do echo "$branchName"; done | sort)
+
+    for i in "${sortedBranchName[@]}"; do 
+      ((branchNumber+=1))
+      if [ "$i" == "$currentbranch" ]; then 
+        BRANCH_INDEX=$branchNumber
+        break;
+      fi
+    done;
+    
+    wt=$(iselect -n "$name" -p $BRANCH_INDEX -kc -kr -K -a -e "$(for branchName in "${sortedBranchName[@]}"; do printf "<s:%s>%-${branchMaxLength}s %s\n" "${branchName}" "${branchName}" "${keyValue[$branchName]}"; done)")
+    if [ "${#wt}" -eq 0 ]; then break; fi
+    selectedCommand=${wt%:*}
+    selectedBranch=${wt#*:}
+    case "$selectedCommand" in
+      RETURN | c)
+        cd "${keyValue[$selectedBranch]}" || return 2
+        break
+        ;;
+      r)
+        # shellcheck disable=SC2119
+        mapfile -t whyNot < <(cd "${keyValue[$selectedBranch]}" || exit 5; glsm; glso;)
+        if [ "${#whyNot[@]}" -eq 2 ] && [ "${whyNot[*]}" == ".mvn/maven.config pom.xml" ]; then
+          rm "${keyValue[$selectedBranch]}/pom.xml";
+          rm "${keyValue[$selectedBranch]}/.mvn/maven.config";
+        fi;
+        if ! gwtr "${keyValue[$selectedBranch]}"; then
+          cd "${keyValue[$selectedBranch]}" || return 4
+          echo "-------- modified"
+          # shellcheck disable=SC2119
+          glsm
+          echo "-------- other"
+          # shellcheck disable=SC2119
+          glso
+          echo "--------"
+          echo 'find . -name '\''*.orig'\'' -delete'
+          # echo "gwtr '$selectedBranch' --force";
+          echo "gwtr '${keyValue[$selectedBranch]##*/}' --force";
+          break; 
+        fi
+        if [ "$selectedBranch" = "$currentbranch" ]; then
+          cd "${keyValue['master']}" || exit 8
+        fi
+        ;;
+      *)
+        echo "breaking"
+        break;;
+    esac
+  done
+  # set +x
+}
+
+function gwtcheck() {
+  if [ -d ./.git ]; then
+    echo 1>&2 ".git is a directory, is this a worktree?"
+    return 1
+  fi
+}
+
+function gwttarget() {
+  if ! worktree_target="$(git rev-parse --show-toplevel)"; then
+    echo 1>&2 "Could not resolve top level directory, is this a worktree?"
+    return 2
+  fi
+  echo "$worktree_target"
+}
+
+function gwtrepo() {
+  if ! repository_target="$(git rev-parse --git-dir)"; then
+    echo 1>&2 "Could not resolve git directory, is this a worktree?"
+    return 3
+  fi
+  echo "$repository_target"
+}
+
+function gwtrel() {
+  gwtcheck || return $?
+  worktree_target=$(gwttarget) || return $?
+  repository_target=$(gwtrepo) || return $?
+  path_worktree_to_repo=$(realpath --relative-to="$worktree_target" "$repository_target")
+  echo "gitdir: $path_worktree_to_repo" > "$worktree_target/.git"
+}
+
+function gwtabs() {
+  gwtcheck || return $?
+  worktree_target=$(gwttarget) || return $?
+  repository_target=$(gwtrepo) || return $?
+  echo "gitdir: $repository_target" > "$worktree_target/.git"
+}
+
+function gaddwt() {
+  [ $# -ne 1 ] \
+    && echo usage > /dev/null \
+    && echo -e "\nusage: ${FUNCNAME[0]} <branch>\n" \
+    && echo -e "\t1. Adds branch worktree." \
+    && echo -e "\t2. Changes the directory to the added worktree." \
+    && echo -e "\t3. Tracks that branch." \
+    && echo -e "\t4. add default revision to .mvn/maven.config." \
+    && return 1
+  # git rev-parse --quiet --verify "$1" > /dev/null \
+  #   && echo "branch $1 exists" \
+  #   && return 2
+  # git branch -c "$1" \
+  #   && 
+    gwta "$1" || return 1
+    cd "$1" || return 2
+    gwtrel || return 3
+    [ ! -f ./pom.xml ] && [ -f ../pom.xml ] && cp ../pom.xml .
+    if [ -f ./pom.xml ]; then
+      mkdir -p .mvn || return 4
+      branch="$(git branch --show-current)" || return 5
+      printf -- "-Drevision=%s-SNAPSHOT" "${branch}" >> .mvn/maven.config
+    fi
+}
+
+function gsetup() {
+  upstream="$(git rev-parse --abbrev-ref --symbolic-full-name \@\{u\})"
+  remote="$(git remote)"
+  branch="$(git branch --show-current)"
+  if [ "$upstream" != "$remote/$branch" ];
+  then
+    git push origin HEAD
+    git branch -u "$remote/$branch"
+  fi
+}

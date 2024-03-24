@@ -1,0 +1,279 @@
+#!/bin/bash
+
+source_file "${HOME}/.bash_functions_cd"
+source_file "${HOME}/.bash_functions_git"
+source_file "${HOME}/.bash_functions_mvn"
+source_file "${HOME}/.bash_functions_vagrant"
+
+function bash_prompt() {
+  local _N='\[\e[0m\]'    # unsets color to term's fg color
+  # Regular Colors
+  local _K='\[\e[30m\]'        # Black
+  local _R='\[\e[31m\]'          # Red
+  local _G='\[\e[32m\]'        # Green
+  local _Y='\[\e[33m\]'       # Yellow
+  local _B='\[\e[34m\]'         # Blue
+  local _M='\[\e[35m\]'       # Purple
+  local _C='\[\e[36m\]'         # Cyan
+  local _W='\[\e[37m\]'        # White
+
+  # Bold
+  local _BB='\[\e[1;30m]'       # Black
+  local _BR='\[\e[1;31m]'         # Red
+  local _BG='\[\e[1;32m]'       # Green
+  local _BY='\[\e[1;33m]'      # Yellow
+  local _BB='\[\e[1;34m]'        # Blue
+  local _BM='\[\e[1;35m]'      # Purple
+  local _BC='\[\e[1;36m]'        # Cyan
+  local _BW='\[\e[1;37m]'       # White
+
+  # Underline
+  local _UB='\[\e[4;30m\]'       # Black
+  local _UR='\[\e[4;31m\]'         # Red
+  local _UG='\[\e[4;32m\]'       # Green
+  local _UY='\[\e[4;33m\]'      # Yellow
+  local _UB='\[\e[4;34m\]'        # Blue
+  local _UM='\[\e[4;35m\]'      # Purple
+  local _UC='\[\e[4;36m\]'        # Cyan
+  local _UW='\[\e[4;37m\]'       # White
+
+  # Background
+  local _BGK='\[\e[40m\]'       # Black
+  local _BGR='\[\e[41m\]'         # Red
+  local _BGG='\[\e[42m\]'       # Green
+  local _BGY='\[\e[43m\]'      # Yellow
+  local _BGB='\[\e[44m\]'        # Blue
+  local _BGM='\[\e[45m\]'      # Purple
+  local _BGC='\[\e[46m\]'        # Cyan
+  local _BGW='\[\e[47m\]'       # White
+
+  # High Intensty
+  local _IK='\[\e[0;90m\]'       # Black
+  local _IR='\[\e[0;91m\]'         # Red
+  local _IG='\[\e[0;92m\]'       # Green
+  local _IY='\[\e[0;93m\]'      # Yellow
+  local _IB='\[\e[0;94m\]'        # Blue
+  local _IM='\[\e[0;95m\]'      # Purple
+  local _IC='\[\e[0;96m\]'        # Cyan
+  local _IW='\[\e[0;97m\]'       # White
+
+  # Bold High Intensty
+  local _BIK='\[\e[1;90m\]'      # Black
+  local _BIR='\[\e[1;91m\]'        # Red
+  local _BIG='\[\e[1;92m\]'      # Green
+  local _BIY='\[\e[1;93m\]'     # Yellow
+  local _BIB='\[\e[1;94m\]'       # Blue
+  local _BIM='\[\e[1;95m\]'     # Purple
+  local _BIC='\[\e[1;96m\]'       # Cyan
+  local _BIW='\[\e[1;97m\]'      # White
+
+  # High Intensty backgrounds
+  local _BGIK='\[\e[100m\]'   # Black
+  local _BGIR='\[\e[101m\]'     # Red
+  local _BGIG='\[\e[102m\]'   # Green
+  local _BGIY='\[\e[103m\]'  # Yellow
+  local _BGIB='\[\e[104m\]'    # Blue
+  local _BGIP='\[\e[105m\]'  # Purple
+  local _BGIC='\[\e[106m\]'    # Cyan
+  local _BGIW='\[\e[107m\]'   # White
+
+  local _UC=$_Y                # user's color
+  [ $UID -eq "0" ] && _UC=$R   # root's color
+  local DISPLAY_USER;
+  local DISPLAY_HOSTNAME;
+  case $TERM in
+    cygwin*|xterm*|rxvt*|mintty*|vscode*)
+      export TITLEBAR="\[\033]0;${DISPLAY_USER}${DISPLAY_HOSTNAME} \w\007\]"
+      ;;
+    *)
+      export TITLEBAR=""
+      ;;
+  esac
+  source_file "$HOME/.git-prompt.sh"
+
+  # PS1="${TITLEBAR}${BGIK}${UC}${DISPLAY_USER:+${DISPLAY_USER}}${G}${DISPLAY_HOSTNAME:+@${DISPLAY_HOSTNAME}}${Y}\W \$(__git_ps1)${N}>"
+  # PS1="\[\e]0;\w\a\]\n\[\e[32m\]\u@\h \[\e[33m\]\w\[\e[0m\]\$(__git_ps1)\n# "
+  # reset pwd newline green username @ hostname yellow pwd gitbranch bgwhite white # black arrow
+  local USERNAME_HOST
+  [[ -n "$DISPLAY_USER" ]] && [[ -n "$DISPLAY_HOSTNAME" ]] && USERNAME_HOST="${DISPLAY_USER}@${DISPLAY_HOSTNAME}"
+
+  PS1="\[\e]0;\w\a\]\n${_G}${USERNAME_HOST}${_Y}\w${_N}\$(__git_ps1)\n${_BGW}${_W}#${_N}"
+
+  #PS1="\[${BGIK}\]\[${Y}\]\u\[${N}\]"
+    # without colors: PS1="[\u@\h \${NEW_PWD}]\\$ "
+    # extra backslash in front of \$ to make bash colorize the prompt
+}
+
+function setupdirs () {
+  local dirfile=${HOME}/.dircommands
+  # grep -vE '^(\s*#|#)' ${dirfile} | while read line
+  
+  while read -r line
+  do
+    # echo line: $line
+    local parts
+    IFS=" " read -r -a parts <<< "$line"
+    # local parts=( $line )
+    # echo ${parts[@]} ${parts[1]}=${parts[2]} ${#parts[@]}
+    if [[ -n "$line" && "$line" != "[[:blank:]#]*" && ${#parts[@]} -eq 3 ]]
+    then
+      # echo eval ${parts[1]}=${parts[2]}
+      eval "${parts[1]}"="${parts[2]}"
+      eval alias "${parts[0]}"=\"cd \$"${parts[1]}"\"
+    fi
+  done < "${dirfile}"
+}
+
+
+function selectmysql () {
+  local mycnfdir=~/.mysqlconnections
+  local mycnffile=~/.my.cnf
+  local mycnfprefix=my.cnf.
+
+  local mycnffiles
+  mapfile -t mycnffiles <( find ${mycnfdir} -name "${mycnfprefix}*" -print0 | xargs -0 -n1 basename | cut -c $(( ${#mycnfprefix} +1))- )
+
+  local cnf
+  cnf=$(iselect -a -Q cancel "${mycnffiles[@]}")
+
+  case $cnf in
+    "cancel")
+      # echo "$cnf"
+      ;;
+    *)
+      echo "selection: $cnf"
+      rm -f $mycnffile
+      ln -s "$mycnfdir/$mycnfprefix$cnf" $mycnffile
+      ;;
+  esac
+}
+
+function setmysql () {
+  local mycnfdir=~/.mysqlconnections
+  local mycnffile=~/.my.cnf
+  local mycnfprefix=my.cnf.
+
+  mapfile -t mycnffiles <(find ${mycnfdir} -name "${mycnfprefix}*" -print0 | xargs -0 -n1 basename | cut -c $(( ${#mycnfprefix} +1))- )
+
+  # local cnf=`iselect -a -Q cancel ${mycnffiles[@]}`
+  local cnf=$1
+
+  case $cnf in
+    "cancel")
+      # echo "$cnf"
+      ;;
+    *)
+      echo "selection: $cnf"
+      if [ -e "$mycnfdir/$mycnfprefix$cnf" ]
+      then
+
+        rm -f $mycnffile
+        ln -s "$mycnfdir/$mycnfprefix$cnf" "$mycnffile"
+        echo "configured: $cnf"
+      fi
+      ;;
+  esac
+}
+
+function sudo {
+  cygstart --action=runas "$@"
+}
+
+function convert_command() {
+  # some commands don't understand cygwin decirated file paths.
+  # If the argument is a file, replace the argument with the "windows" path.
+  local -n commands="$1"
+  local -n converted_args="$2"
+  local index
+  # local args=("$@")
+  for index in $(seq 0 ${#converted_args[@]}) ; do
+    case "${converted_args[index]}" in
+      # do not attempt to convert options
+      -*) continue;;
+      *)  [ -e "${converted_args[index]}" ] && _args[index]="$(cygpath --windows "${converted_args[index]}")";;
+    esac
+  done
+  "${commands[@]}" "${converted_args[@]}"
+}
+
+function bat() {
+  local _commands=( "$(which bat)" )
+  local _args=("$@")
+  convert_command _commands _args
+}
+
+function chezmoi() {
+  local _commands=( "$(which chezmoi)" )
+  local _args=("$@")
+  convert_command _commands _args
+}
+
+function cm() {
+  chezmoi "$@"
+}
+
+# borrowed from `chezmoi completion bash``
+if [[ $(type -t compopt) = "builtin" ]]; then
+    complete -o default -F __start_chezmoi cm
+else
+    complete -o default -o nospace -F __start_chezmoi cm
+fi
+
+function npp() { 
+  local _commands=( setsid CMD /C "$(cygpath -w "C:\Program Files\Notepad++\notepad++.exe")" ) 
+  local _args=("$@")
+  convert_command _commands _args
+}
+
+function idea() { 
+  local _command=( setsid CMD /C "$(cygpath -w "$LOCALAPPDATA")/JetBrains/Toolbox/scripts/idea.cmd")
+  local _args=("$@")
+  convert_command _command _args
+  # ${_command[@]} ${_args[@]}
+}
+
+function rubymine() {
+  local _commands=( setsid CMD /C "C:\Program Files\JetBrains/bin/rubymine.cmd" ) 
+  local _args=("$@")
+  convert_command _commands _args
+}
+
+function nppgit() { '/proc/cygdrive/c/Program Files/Notepad++/notepad++.exe' -multiInst -nosession -notabbar -noPlugin -n3 "$(cygpath -w "$*")"; }
+
+function selectjdk() {
+  local DEV_DIR=/c/dev
+  local JAVA_DIR="$DEV_DIR/Java"
+  local JDKS JDK_CURRENT JDK_INDEX
+  shopt -s nullglob
+  JDKS=( "$JAVA_DIR/"*jdk* )
+  JDKS=( "${JDKS[@]##*/}" )
+  local java_symlink="$JAVA_DIR/home"
+  [ -h "$java_symlink" ] && [ -e "$java_symlink" ] && JDK_CURRENT=$(readlink "$java_symlink")
+  JDK_INDEX=1
+  for i in "${!JDKS[@]}"; do
+    if [ "${JDKS[i]}" == "$JDK_CURRENT" ]; then JDK_INDEX=$((i + 1)); break; fi
+  done;
+  jdk=$(iselect -p $JDK_INDEX -a "${JDKS[@]}" )
+  [ -z "$jdk" ] && return 1
+  [ ! -h "$java_symlink" ] && [ -e "$java_symlink" ] && (echo "Can't create symlink because file exists: $java_symlink"; return 2; )
+  
+  [ -e "$java_symlink" ] && rm "$java_symlink"
+  [ -e "$java_symlink" ] && (echo "could not delete symlink: $java_symlink"; return 3; )
+
+  ln -s "$jdk" "$java_symlink"
+  echo "selected: $jdk"
+}
+
+yq() {
+  docker run --rm -i -v "${PWD}":/workdir mikefarah/yq "$@"
+}
+
+setupcygwin() {(
+  set -e
+  EXE=setup-x86_64.exe
+  TMPFILE=$(mktemp -d)/${EXE}
+  wget https://www.cygwin.com/${EXE} -O "$TMPFILE"
+  chmod +x "$TMPFILE"
+  start "$(cygpath -w "$TMPFILE")"
+  set +e
+)}

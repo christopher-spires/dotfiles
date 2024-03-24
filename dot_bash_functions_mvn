@@ -1,0 +1,181 @@
+#!/bin/bash
+
+function mc()   { m c "$@"; }
+function mi()   { m i "$@"; }
+function mci()  { m ci "$@"; }
+function mcis() { m cis "$@"; }
+function mis()  { m is "$@"; }
+function m_usage_commands() {
+cat <<EOF
+m [bcdehipqrstuvX] [options] [<goal(s)>] [<phase(s)>]
+  b spring-boot:run
+  c clean
+  d dependency:
+    a analyze
+    l list
+    p purge-local-repository
+    r dependency:analyze-report
+    t tree
+  e --errors
+  g generate:
+    s sources
+    t test-sources
+  h help (usage including options)
+  H help:effective-pom
+  i install
+  p package
+  q --quiet
+  r -Drevision=local-<branch>-SNAPSHOT
+  s -DskipTests
+  t test
+  U --update-snapshots
+  v verify
+  X --debug  
+EOF
+}
+function m_usage_options() {
+  mvn -h | tail -n +3
+}
+function m_usage() {
+  m_usage_commands
+  m_usage_options
+}
+function m() {
+  local commands=$1
+  local numCommands=${#commands}
+  local COMMAND
+  local CLEAN_COMMAND
+  local PASSTHROUGH=false
+  local previousCommands
+  local revisionParam
+  # revisionParam="-Drevision=local-$(__git_ps1 "%s")-SNAPSHOT"
+  revisionParam="-Drevision=local-$(git symbolic-ref --short HEAD)-SNAPSHOT"
+  # set -x
+  [[ $numCommands -eq 0 ]] && m_usage_commands && return;
+
+  for (( i=0; i < numCommands; i++ )); do
+    local nextCommand=${commands:$i:1}
+    if [[ "$previousCommands" =~ .*"$nextCommand".* ]]; then PASSTHROUGH=true; fi
+    if [ "$PASSTHROUGH" = true ]; then break; fi
+    if [[ "$previousCommands" != "d" ]]; then previousCommands=${previousCommands}${nextCommand}; fi
+    case "${commands:$i:1}" in
+      -) ((i++))
+         case "${commands:$i:1}" in
+         -) shift 1 && PASSTHROUGH=true ;;
+         *) PASSTHROUGH=true;;
+         esac
+         ;;
+	    b) COMMAND+=("spring-boot:run") ;;
+      c) CLEAN_COMMAND+=("clean");;
+      d) ((i++))
+         case "${commands:$i:1}" in
+           a) COMMAND+=("dependency:analyze") ;;
+           j) COMMAND+=("dependency:resolve" "-Dclassifier=javadoc");;
+           l) COMMAND+=("dependency:list") ;;
+           p) COMMAND+=("dependency:purge-local-repository");;
+           r) COMMAND+=("dependency:analyze-report") ;;
+           s) COMMAND+=("dependency:sources");;
+           t) COMMAND+=("dependency:tree") ;;
+           *) PASSTHROUGH=true ;;
+         esac
+         ;;
+      e) COMMAND+=("--errors") ;;
+      g) ((i++))
+         case "${commands:$i:1}" in
+           s) COMMAND+=("generate-sources") ;;
+           t) COMMAND+=("generate-test-sources") ;;
+           *) PASSTHROUGH=true ;;
+         esac
+         ;;      
+      h) m_usage; return;;
+      H) COMMAND+=("help:effective-pom");;
+      i) COMMAND+=("install") ;;
+      p) COMMAND+=("package") ;;
+      q) COMMAND+=("--quiet") ;;
+      r) COMMAND+=("$revisionParam") ;;
+      s) COMMAND+=("-DskipTests") ;;
+      t) COMMAND+=("test") ;;
+      U) COMMAND+=("--update-snapshots") ;;
+      v) COMMAND+=("verify") ;;
+      X) COMMAND+=("--debug") ;;
+      *) PASSTHROUGH=true;;
+    esac
+  done
+  if [ "$PASSTHROUGH" = true ]; then
+    COMMAND=("$@")
+    unset CLEAN_COMMAND
+  else
+    shift 1
+    local add_next_arg=false
+    for arg in "$@"; do
+      [[ "$add_next_arg" = true ]] && CLEAN_COMMAND+=("$arg") && add_next_arg=false
+      case "$arg" in
+        "-f" | "--file" )
+          [[ ${#CLEAN_COMMAND} -gt 0 ]] && CLEAN_COMMAND+=("$arg") && add_next_arg=true
+          [[ ${#COMMAND} -gt 0 ]] && COMMAND+=("$arg")
+          ;;
+        "-P" | "--activate-profiles" )
+          [[ ${#CLEAN_COMMAND} -gt 0 ]] && CLEAN_COMMAND+=("$arg") && add_next_arg=true
+          [[ ${#COMMAND} -gt 0 ]] && COMMAND+=("$arg")
+          ;;
+        "-pl" | "--projects" )
+          [[ ${#CLEAN_COMMAND} -gt 0 ]] && CLEAN_COMMAND+=("$arg") && add_next_arg=true
+          [[ ${#COMMAND} -gt 0 ]] && COMMAND+=("$arg")
+          ;;
+        "-rf" | "--resume-from" )
+          [[ ${#CLEAN_COMMAND} -gt 0 ]] && CLEAN_COMMAND+=("$arg") && add_next_arg=true
+          [[ ${#COMMAND} -gt 0 ]] && COMMAND+=("$arg")
+          ;;
+        "-am" | "--also-make" )
+          [[ ${#CLEAN_COMMAND} -gt 0 ]] && CLEAN_COMMAND+=("$arg")
+          [[ ${#COMMAND} -gt 0 ]] && COMMAND+=("$arg")
+          ;;
+        "-D"* )
+          [[ ${#CLEAN_COMMAND} -gt 0 ]] && CLEAN_COMMAND+=("$arg")
+          [[ ${#COMMAND} -gt 0 ]] && COMMAND+=("$arg")
+          ;;
+        * ) COMMAND+=("$arg")
+          ;;
+      esac
+    done
+    [[ "${#CLEAN_COMMAND}" -gt 0 ]] && [[ "$previousCommands" =~ .*r.* ]] && CLEAN_COMMAND+=("$revisionParam")
+  fi
+  if [ ! -e ./pom.xml ] && [ -e ./modules/pom.xml ]; then
+    cd modules || return 1;
+  fi
+  #set -x
+  [[ "${#CLEAN_COMMAND[@]}" -gt 0 ]] && CLEAN_COMMAND=(mvn "${CLEAN_COMMAND[@]}" )
+  [[ "${#COMMAND[@]}" -gt 0 ]] && COMMAND=(mvn "${COMMAND[@]}" )
+  [[ ${#CLEAN_COMMAND} -gt 0 ]] && printf "%s\n" "${CLEAN_COMMAND[*]}"
+  [[ ${#COMMAND} -gt 0 ]] && printf "%s\n" "${COMMAND[*]}"
+  
+  "${CLEAN_COMMAND[@]:-:}" && "${COMMAND[@]:-:}"
+  #set +x
+}
+complete -o default -F _mvn -o nospace m
+
+function selectmvn() {
+  local DEV_DIR=/c/dev
+  local MAVEN_DIR="$DEV_DIR/maven"
+  local mvn_symlink="$MAVEN_DIR/home"
+  local MAVENS mvn MVN_CURRENT
+  shopt -s nullglob
+  
+  mapfile -t MAVENS < <(find $MAVEN_DIR -maxdepth 1 -name 'apache-maven-*' -type d -exec basename {} \;)
+
+  [ -h "$mvn_symlink" ] && [ -e "$mvn_symlink" ] && MVN_CURRENT=$(readlink "$mvn_symlink")
+  local MVN_INDEX=1
+  for i in "${!MAVENS[@]}"; do
+    if [ "${MAVENS[i]}" == "$MVN_CURRENT" ]; then MVN_INDEX=$((i + 1)); break; fi
+  done;
+
+  mvn=$(iselect -p $MVN_INDEX -a "${MAVENS[@]}")
+  [ -z "$mvn" ] && return 1
+
+  [ ! -h "$mvn_symlink" ] && [ -e "$mvn_symlink" ] && (echo "Can't create symlink because file exists: $mvn_symlink"; return 2; )
+  
+  [ -e "$mvn_symlink" ] && rm "$mvn_symlink"
+  [ -e "$mvn_symlink" ] && (echo "could not delete symlink: $mvn_symlink"; return 3; )
+
+  ln -s "$mvn" "$mvn_symlink"
+}

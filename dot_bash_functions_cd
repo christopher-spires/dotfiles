@@ -1,0 +1,122 @@
+#!/bin/bash
+# This function defines a 'cd' replacement function capable of keeping,
+# displaying and accessing history of visited directories, up to 10 entries.
+# To use it, uncomment it, source this file and try 'cd --'.
+# acd_func 1.0.5, 10-nov-2004
+# Petar Marinov, http:/geocities.com/h2428, this is public domain
+
+cd_func ()
+{
+  local x2 the_new_dir adir index
+  local -i cnt
+
+  if [[ $1 ==  "--" ]]; then
+    dirs -v
+    return 0
+  fi
+
+  the_new_dir=$1
+  [[ -z $1 ]] && the_new_dir=$HOME
+
+  if [[ ${the_new_dir:0:1} == '-' ]]; then
+    #
+    # Extract dir N from dirs
+    index=${the_new_dir:1}
+    [[ -z $index ]] && index=1
+    adir=$(dirs +"$index")
+    [[ -z $adir ]] && return 1
+    the_new_dir=$adir
+  fi
+
+  #
+  # '~' has to be substituted by ${HOME}
+  [[ ${the_new_dir:0:1} == '~' ]] && the_new_dir="${HOME}${the_new_dir:1}"
+
+  #
+  # Now change to the new dir and add to the top of the stack
+  pushd "${the_new_dir}" > /dev/null || return $?
+  the_new_dir=$(pwd)
+
+  #
+  # Trim down everything beyond 11th entry
+  popd -n +11 2>/dev/null 1>/dev/null
+
+  #
+  # Remove any other occurence of this dir, skipping the top of the stack
+  for ((cnt=1; cnt <= 10; cnt++)); do
+    x2=$(dirs "+${cnt}" 2>/dev/null) || return 0
+    ## [[ $? -ne 0 ]] && return 0
+    [[ ${x2:0:1} == '~' ]] && x2="${HOME}${x2:1}"
+    if [[ "${x2}" == "${the_new_dir}" ]]; then
+      popd -n "+$cnt" 2>/dev/null 1>/dev/null
+      cnt=$((cnt-1))
+    fi
+  done
+
+  return 0
+}
+
+function path_remove {
+  IFS=:
+  local REMOVEPATH=( "$1" )
+  for name in "${REMOVEPATH[@]}"; do
+    if ( in_path "$name" ); then
+      # convert it to an array
+      # shellcheck disable=SC2206
+      local t=($PATH)
+      # perform any array operations to remove elements from the array
+      t=("${t[@]%%$name}")
+      # output the new array
+      PATH="${t[*]}"
+    else
+      echo "$name not in path"
+    fi
+  done
+  unset IFS
+  path_clean
+}
+
+function path_append {
+  local NEWPATH
+  IFS=:
+  local ADDPATH=( "$1" )
+  for name in "${ADDPATH[@]}"; do
+    in_path "$name" && echo "$name in path" && continue
+    NEWPATH="$NEWPATH:$name"
+  done
+  unset IFS
+  [[ ${#NEWPATH} ]] && PATH=${PATH}${NEWPATH}
+}
+
+function path_prepend {
+  local NEWPATH
+  IFS=:
+  local ADDPATH=( "$1" )
+  for name in "${ADDPATH[@]}"; do
+    in_path "$name" && echo "$name in path" && continue
+    NEWPATH="$NEWPATH:$name"
+  done
+  unset IFS
+  [[ ${#NEWPATH} ]] && PATH=${NEWPATH:1}:${PATH}
+}
+
+function in_path {
+  local needle=$1
+  local name
+  IFS=:
+    for name in "${PATH[@]}"; do
+        [[ "$name" == "$needle" ]] && unset IFS && return 0
+    done
+  unset IFS
+    return 1
+}
+
+function path_clean {
+  while [ "$PATH" != "${PATH/::/:}" ]
+  do
+    PATH=${PATH/::/:}
+  done
+
+  PATH=${PATH#:}
+  PATH=${PATH%:}
+}

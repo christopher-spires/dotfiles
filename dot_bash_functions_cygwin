@@ -1,0 +1,43 @@
+#!/bin/bash
+
+function listpackages() {
+  # 1. list of packages
+  # 2. list of dependencies (uniq)
+  # 3. output list of packages not in dependencies
+  mapfile -t installed_packages < <(cygcheck -n)
+
+  for package in "${installed_packages[@]}"; do
+    mapfile -t new_dependencies < <(cygcheck -i --inst --deps "$package" |& grep -e '^Dependencies' | sed -e 's/Dependencies: //' -e 's/, /\n/g' | cut -d ' ' -f 1)
+    dependencies+=("${new_dependencies[@]}")
+  done
+
+  # Declare an associative array to keep track of unique elements
+  declare -A seen
+
+  # Create a new array to store unique elements
+  unique_dependencies=()
+
+  # Iterate through the array
+  for element in "${dependencies[@]}"; do
+      # Check if the element has been seen before
+      if [[ ! -v seen["$element"] ]]; then
+          # If not, add it to the unique array and mark it as seen
+          unique_dependencies+=("$element")
+          seen["$element"]=1
+      fi
+  done
+
+  # Print the unique array
+  # echo "${unique_dependencies[@]}"
+  function list_dependencies() {
+    for element in "${unique_dependencies[@]}"; do
+      echo "$element"
+    done
+  }
+
+  for package in "${installed_packages[@]}"; do
+    if ! list_dependencies | grep -xq "$package"; then
+      echo "$package"
+    fi
+  done
+}
