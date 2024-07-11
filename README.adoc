@@ -62,7 +62,7 @@ I was able to create a config file from the default configuration and modify it.
 
 [source,bash]
 ----
-_config_dir=/c/Users/$USER/.config/chezmoi
+_config_dir=/proc/cygdrive/c/Users/$USER/.config/chezmoi
 mkdir -p "$_config_dir" ~/.local/share/chezmoi ~/.cache/chezmoi
 cm dump-config | sed 's#/Users/#/cygwin64/home/#' > "$_config_dir/chezmoi.dump.json"
 mv "$_config_dir/chezmoi.dump.json" "$_config_dir/chezmoi.json"
