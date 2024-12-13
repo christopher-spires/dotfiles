@@ -41,7 +41,17 @@ function gstatus() { git status "$@"; }
 ___git_complete gstatus _git_status
 function gwt() { git worktree "$@"; }
 ___git_complete gwt _git_worktree
-function gwta() { git worktree add "$@" && gwthwt; }
+# function gwta() { git worktree add "$@" && gwthwt; }
+function gwta() { git worktree add "$@"; }
+function gwta() {
+    local branch=$1
+    shift
+    local createBranch='-b'
+    git rev-parse --quiet --verify "$branch" > /dev/null \
+    && echo "branch $branch exists" \
+    && createBranch=
+    git worktree add "$branch" $createBranch "$branch" "$@";
+}
 function gwtl() { git worktree list "$@"; }
 
 function gwtch() {
@@ -252,6 +262,28 @@ function gwtabs() {
   echo "gitdir: $repository_target" > "$worktree_target/.git"
 }
 
+function gabwt() {
+  if [ -z "$1" ] || [ -z "$2" ]; then
+    echo "Usage: gabwt <branch-type> <branch-name>"
+    return 1
+  fi
+
+  local branch_type="$1"
+  local branch_name="$2"
+  local full_branch_name="${branch_type}/${branch_name}"
+  local branch_folder="branches/${full_branch_name}"
+
+  # Create the branch folder if it doesn't exist
+  mkdir -p "$branch_folder"
+
+  # Create the new branch and set up the worktree
+  git worktree add "$branch_folder" -b "$full_branch_name"
+
+  echo "Branch '$full_branch_name' created with folder '$branch_folder'."
+# Example usage:
+# gwtadd feature my-awesome-feature
+}
+
 function gaddwt() {
   [ $# -ne 1 ] \
     && echo usage > /dev/null \
@@ -259,8 +291,8 @@ function gaddwt() {
     && echo -e "\t1. Adds branch worktree." \
     && echo -e "\t2. Changes the directory to the added worktree." \
     && echo -e "\t3. Tracks that branch." \
-    && echo -e "\t4. add default revision to .mvn/maven.config." \
     && return 1
+      
   # git rev-parse --quiet --verify "$1" > /dev/null \
   #   && echo "branch $1 exists" \
   #   && return 2
@@ -269,12 +301,12 @@ function gaddwt() {
     gwta "$1" || return 1
     cd "$1" || return 2
     gwtrel || return 3
-    [ ! -f ./pom.xml ] && [ -f ../pom.xml ] && cp ../pom.xml .
-    if [ -f ./pom.xml ]; then
-      mkdir -p .mvn || return 4
-      branch="$(git branch --show-current)" || return 5
-      printf -- "-Drevision=%s-SNAPSHOT" "${branch}" >> .mvn/maven.config
-    fi
+    # [ ! -f ./pom.xml ] && [ -f ../pom.xml ] && cp ../pom.xml .
+    # if [ -f ./pom.xml ]; then
+    #   mkdir -p .mvn || return 4
+    #  branch="$(git branch --show-current)" || return 5
+    #   printf -- "-Drevision=%s-SNAPSHOT" "${branch}" >> .mvn/maven.config
+    # fi
 }
 
 function gsetup() {

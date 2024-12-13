@@ -59,7 +59,7 @@ shopt -s direxpand
 # History Options
 #
 # Don't put duplicate lines in the history.
-# export HISTCONTROL=$HISTCONTROL${HISTCONTROL+,}ignoredups
+# export HISTCONTROL=$HISTCONTROL${HISTCONTROL+,}ignoredupscy
 export HISTCONTROL=$HISTCONTROL${HISTCONTROL+:}ignoredups
 #
 # Ignore some controlling instructions
@@ -67,7 +67,7 @@ export HISTCONTROL=$HISTCONTROL${HISTCONTROL+:}ignoredups
 # The '&' is a special pattern which suppresses duplicate entries.
 # export HISTIGNORE=$'[ \t]*:&:[fb]g:exit'
 # export HISTIGNORE=$'[ \t]*:&:[fb]g:exit:ls' # Ignore the ls command as well
-export HISTIGNORE=$'[ \t]*:&:[fb]g:exit:ls:pwd:which:whoami:history' # Ignore the ls:pwd command as well
+export HISTIGNORE=$'[ \t]*:&:[fb]g:exit:ls:pwd:which*:whoami:history:hg*' # Ignore the ls:pwd command as well
 #
 # Whenever displaying the prompt, write the previous line to disk
 # export PROMPT_COMMAND="history -a"
@@ -201,6 +201,25 @@ source_file "${HOME}/.bash_functions"
 #
 # alias cd=cd_func
 
+WSL_OSTYPE=linux-gnu
+CYGWIN_OSTYPE=cygwin
+if [[ "$OSTYPE" == "$CYGWIN_OSTYPE" ]]; then
+  # echo "Running in Cygwin"
+  IS_CYGWIN=true
+  IS_WSL2=false
+# elif grep -qEi "(Microsoft|WSL)" /proc/version &> /dev/null && [ -n "$WSL_INTEROP" ]; then
+elif [[ "$OSTYPE" == "$WSL_OSTYPE" ]]; then
+  # echo "Running in WSL2"
+  IS_CYGWIN=false
+  IS_WSL2=true
+else
+  echo "Running unknown environment"
+  IS_CYGWIN=false
+  IS_WSL2=false
+fi
+
+[[ "$IS_WSL2" == true ]] && alias cygpath=wslpath
+
 eval "$(dircolors -b ~/.dircolors)"
 export LS_OPTIONS="-p --color=auto --group"
 export GREP_COLORS='ms=01;32:mc=:sl=:cx=:fn=36:ln=33:bn=32:se=39'
@@ -223,25 +242,22 @@ export DISPLAY=${DISPLAY:-":0.0"}
   #* default=changes,grid,header-filename,numbers,snip
   #* full=changes,grid,header-filename,header-filesize,numbers,snip
 export BAT_STYLE=grid,header-filename,snip
+# [[ "$IS_WSL2" == true ]] && export DIR_C=/mnt/c
 setupdirs
 
-if _vagrant_version=$(vagrant -v | grep -Po '\d+\.\d+\.\d+'); then
+if _vagrant_version=$(which vagrant 2> /dev/null && vagrant -v | grep -Po '\d+\.\d+\.\d+'); then
   # shellcheck disable=SC1090
   . "/c/Program Files/Vagrant/embedded/gems/gems/vagrant-${_vagrant_version}/contrib/bash/completion.sh"
-  else
-  >&2 echo "unable to determine version for vagrant completion: /c/Program Files/Vagrant/embedded/gems/gems/vagrant-<version>/contrib/bash/completion.sh"
-  # >>>> Vagrant command completion (start)
-    # shellcheck disable=SC1091
-    . "/c/Program Files/Vagrant/embedded/gems/gems/vagrant-2.4.1/contrib/bash/completion.sh"
-  # <<<<  Vagrant command completion (end)
 fi
 
-STARSHIP_CONFIG_FILE=~/.config/starship.toml
-if [ ! -f $STARSHIP_CONFIG_FILE ]; then 
-  echo >&2 "could not find $STARSHIP_CONFIG_FILE"
+if [[ "$IS_CYGWIN" == true ]] ; then
+  STARSHIP_CONFIG_FILE=~/.config/starship.toml
+  if [ ! -f $STARSHIP_CONFIG_FILE ]; then 
+    echo >&2 "could not find $STARSHIP_CONFIG_FILE"
+  fi
+  STARSHIP_CONFIG=$(cygpath -m $STARSHIP_CONFIG_FILE)
+  export STARSHIP_CONFIG
 fi
-STARSHIP_CONFIG=$(cygpath -m $STARSHIP_CONFIG_FILE)
-export STARSHIP_CONFIG
 
 function set_starship_windows_title() {
   if branch=$(git branch --show-current 2> /dev/null); then
@@ -251,5 +267,5 @@ function set_starship_windows_title() {
   fi
   echo -ne "\033]0;$title\007"
 }
-export starship_precmd_user_func="set_starship_windows_title"
-eval "$(starship init bash)"
+
+[[ "$IS_WSL2" == true ]] && export starship_precmd_user_func="set_starship_windows_title" && eval "$(starship init bash)"

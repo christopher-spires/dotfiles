@@ -258,5 +258,6 @@ _mvn()
 }
 
 complete -o default -F _mvn -o nospace mvn
+complete -o default -F _mvn -o nospace m
 complete -o default -F _mvn -o nospace mvnDebug
 complete -o default -F _mvn -o nospace mvnw

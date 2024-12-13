@@ -1,4 +1,6 @@
 # https://starship.rs/config/
+"$schema" = 'https://starship.rs/config-schema.json'
+
 command_timeout = 1000
 
 # [azure]
@@ -35,17 +37,20 @@ disabled = true
 # stashed = ""
 
 [java]
+disabled = true
 format ="[$symbol($version )]($style)"
 version_format = "v${major}"
 style = 'red'
-symbol = "☕"
+symbol = ""
 
 [nodejs]
+disabled = true
 format = "[$symbol($version )]($style)"
 style ="green"
 symbol = ""
 
 [python]
+disabled = true
 version_format = "v${major}.${minor}"
 format = "[$symbol($version )]($style)"
 
@@ -54,3 +59,11 @@ disabled = true
 
 [vagrant]
 format = "[$symbol($version )]($style)"
+
+[package]
+disabled = true
+format="[$symbol$version]($style)"
+symbol = "📦"
+
+[gradle]
+format="[$symbol($version )]($style)"

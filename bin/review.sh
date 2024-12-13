@@ -62,7 +62,7 @@ list() {
 
 next_file() {
   debug next_file;
-  [[ $file_idx -eq $file_count-1 ]] && error last file && return
+  [[ $file_idx -ge $file_count-1 ]] && error last file && return
   (( file_idx++ ))
   debug file_idx="$file_idx";
   set_file
@@ -70,7 +70,7 @@ next_file() {
 
 next_style() {
   debug next_style;
-  [[ $style_idx -eq $style_count-1 ]] && error last style && return
+  [[ $style_idx -ge $style_count-1 ]] && error last style && return
   (( style_idx++ ))
   debug style_idx="$style_idx";
   set_style
@@ -78,7 +78,7 @@ next_style() {
 
 next_output() {
   debug next_output;
-  [[ $hl_out_idx -eq $hl_out_count-1 ]] && error last output && return
+  [[ $hl_out_idx -ge $hl_out_count-1 ]] && error last output && return
   (( hl_out_idx++ ))
   debug hl_out_idx="$hl_out_idx"
   set_output
@@ -86,7 +86,7 @@ next_output() {
 
 previous_file() {
   debug previous_file;
-  [[ $file_idx -eq 0 ]] && error first file && return
+  [[ $file_idx -le 0 ]] && error first file && return
   (( file_idx-- ))
   debug file_idx="$file_idx"
   set_file
@@ -94,7 +94,7 @@ previous_file() {
 
 previous_style() {
   debug previous_style;
-  [[ $style_idx -eq 0 ]] && error first style && return
+  [[ $style_idx -le 0 ]] && error first style && return
   (( style_idx-- ))
   debug style_idx="$style_idx"
   set_style
@@ -102,7 +102,7 @@ previous_style() {
 
 previous_output() {
   debug previous_style;
-  [[ $hl_out_idx -eq 0 ]] && error first output && return
+  [[ $hl_out_idx -le 0 ]] && error first output && return
   (( hl_out_idx-- ))
   debug hl_out_idx="$hl_out_idx"
   set_output
@@ -135,11 +135,12 @@ glso() {
 set_files() {
   file_idx=0
   file_count=${#files[@]}
+  local last_file=$(( file_count > 0 ? file_count - 1 : 0 ))
   set_file
   echo "read $file_count files"
   debug "file : $file"
   debug "first: ${files[0]}"
-  debug "last : ${files[$file_count-1]}"
+  debug "last : ${files[$last_file]}"
 }
 
 set_modified_files() {
@@ -211,7 +212,8 @@ edit_file_vscode() {
 }
 
 progress() {
-  echo -n "${file_idx}/${file_count}"
+  local file_idx_1=$(( file_count > 0 ? file_idx + 1 : 0 ))    
+  echo -n "${file_idx_1}/${file_count}"
 }
 
 quit() {

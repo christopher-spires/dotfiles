@@ -3,6 +3,7 @@
 source_file "${HOME}/.bash_functions_cd"
 source_file "${HOME}/.bash_functions_git"
 source_file "${HOME}/.bash_functions_mvn"
+source_file "${HOME}/.bash_functions_gradle"
 source_file "${HOME}/.bash_functions_vagrant"
 
 function bash_prompt() {
@@ -97,7 +98,8 @@ function bash_prompt() {
   local USERNAME_HOST
   [[ -n "$DISPLAY_USER" ]] && [[ -n "$DISPLAY_HOSTNAME" ]] && USERNAME_HOST="${DISPLAY_USER}@${DISPLAY_HOSTNAME}"
 
-  PS1="\[\e]0;\w\a\]\n${_G}${USERNAME_HOST}${_Y}\w${_N}\$(__git_ps1)\n${_BGW}${_W}#${_N}"
+  # PS1="\[\e]0;\w\a\]\n${_G}${USERNAME_HOST}${_Y}\w${_N}\$(__git_ps1)\n${_BGW}${_W}#${_N}"
+  PS1="\[\e]0;\w\a\]\n${_G}${USERNAME_HOST}${_Y}\w${_N}\$(__git_ps1)\n${_BGW}${_W}#${_N} "
 
   #PS1="\[${BGIK}\]\[${Y}\]\u\[${N}\]"
     # without colors: PS1="[\u@\h \${NEW_PWD}]\\$ "
@@ -110,17 +112,42 @@ function setupdirs () {
   
   while read -r line
   do
-    # echo line: $line
-    local parts
-    IFS=" " read -r -a parts <<< "$line"
-    # local parts=( $line )
-    # echo ${parts[@]} ${parts[1]}=${parts[2]} ${#parts[@]}
-    if [[ -n "$line" && "$line" != "[[:blank:]#]*" && ${#parts[@]} -eq 3 ]]
-    then
-      # echo eval ${parts[1]}=${parts[2]}
-      eval "${parts[1]}"="${parts[2]}"
-      eval alias "${parts[0]}"=\"cd \$"${parts[1]}"\"
-    fi
+    # echo "line: $line"
+
+    [[ -z "$line" || "$line" =~ ^[[:blank:]]*# ]] && continue
+    # echo "filtered"
+    # IFS=" " read -r -a parts <<< "$line"
+    local alias var dir remainder
+    # normalized
+    # normalized=$(echo "$line" | awk '{$1=$1; print $1, $2, substr($0, index($0,$3))}')
+    # aliaspart=$(echo "$normalized" | cut -d ' ' -f 1)
+#     aliaspart=$(echo "$line" | awk '{print $1}' )
+    alias="${line%% *}"
+    # echo "alias='$alias'"
+    remainder="${line#* }"
+    # ho "remainder='$remainder'"
+    remainder="${remainder#"${remainder%%[![:space:]]*}"}"
+    # ho "remainder='$remainder'"
+    # varpart=$(echo "$normalized" | cut -d ' ' -f 2)
+    # varpart=$(echo "$line" | awk '{print $2}' )
+    var="${remainder%% *}"
+    # echo "remainder='$remainder'"
+    # echo "var='$var'"
+    dir="${remainder#* }"
+    # echo "dir='$dir'"
+    dir="${dir#"${dir%%[![:space:]]*}"}"
+    # echo "dir='$dir'"
+
+    # dirpart=$(echo "$normalized" | cut -d ' ' -f 3-)
+    # dirpart=$(echo "$line" | awk '{print substr($0, index($0,$3))}' )
+    # echo "dirpart=$dirpart"
+    # echo "split"
+    # echo "aliaspart=${aliaspart}"
+    # echo "varpart=${varpart}"
+    # echo "dirpart=${dirpart}"
+    eval "${var}"="${dir}"
+    eval alias "${alias}"=\"cd \'"${dir}"\'\"
+    # echo "evaled"
   done < "${dirfile}"
 }
 
@@ -175,9 +202,11 @@ function setmysql () {
   esac
 }
 
-function sudo {
-  cygstart --action=runas "$@"
-}
+if [[ "$IS_CYGWIN" == true ]] ; then
+  function sudo {
+    cygstart --action=runas "$@"
+  }
+fi
 
 function convert_command() {
   # some commands don't understand cygwin decirated file paths.
@@ -190,7 +219,7 @@ function convert_command() {
     case "${converted_args[index]}" in
       # do not attempt to convert options
       -*) continue;;
-      *)  [ -e "${converted_args[index]}" ] && _args[index]="$(cygpath --windows "${converted_args[index]}")";;
+      *)  [ -e "${converted_args[index]}" ] && _args[index]="$(cygpath -w "${converted_args[index]}")";;
     esac
   done
   "${commands[@]}" "${converted_args[@]}"
@@ -226,7 +255,10 @@ function npp() {
 }
 
 function idea() { 
-  local _command=( setsid CMD /C "$(cygpath -w "$LOCALAPPDATA")/JetBrains/Toolbox/scripts/idea.cmd")
+  # local _command=( setsid CMD /C "$(cygpath -w "$LOCALAPPDATA")/JetBrains/Toolbox/scripts/idea.cmd")
+  local _command
+  [[ "$IS_WSL2" == true ]] && 
+  _command=$(which idea)
   local _args=("$@")
   convert_command _command _args
   # ${_command[@]} ${_args[@]}
@@ -268,6 +300,13 @@ yq() {
   docker run --rm -i -v "${PWD}":/workdir mikefarah/yq "$@"
 }
 
+confluent() {
+  docker run --rm -it \
+    -v "$(cygpath -m "${PWD}")":/workdir \
+    -v "$(cygpath -m "${HOME}")/.confluent":/root/.confluent \
+    confluentinc/confluent-cli:latest confluent "$@"
+}
+
 setupcygwin() {(
   set -e
   EXE=setup-x86_64.exe
@@ -277,3 +316,7 @@ setupcygwin() {(
   start "$(cygpath -w "$TMPFILE")"
   set +e
 )}
+
+hg() {
+  history | grep "$@"
+}
