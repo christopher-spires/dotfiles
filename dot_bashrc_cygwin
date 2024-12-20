@@ -1,0 +1,8 @@
+#!/bin/bash
+STARSHIP_CONFIG_FILE=~/.config/starship.toml
+if [ ! -f $STARSHIP_CONFIG_FILE ]; then 
+  >&2 echo "could not find $STARSHIP_CONFIG_FILE"
+fi
+STARSHIP_CONFIG=$(cygpath -m $STARSHIP_CONFIG_FILE)
+export STARSHIP_CONFIG
+

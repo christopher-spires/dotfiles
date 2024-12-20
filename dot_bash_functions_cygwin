@@ -41,3 +41,7 @@ function listpackages() {
     fi
   done
 }
+
+function sudo {
+  cygstart --action=runas "$@"
+}

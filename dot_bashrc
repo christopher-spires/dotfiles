@@ -207,18 +207,18 @@ if [[ "$OSTYPE" == "$CYGWIN_OSTYPE" ]]; then
   # echo "Running in Cygwin"
   IS_CYGWIN=true
   IS_WSL2=false
+  source_file "${HOME}/.bashrc_cygwin"
 # elif grep -qEi "(Microsoft|WSL)" /proc/version &> /dev/null && [ -n "$WSL_INTEROP" ]; then
 elif [[ "$OSTYPE" == "$WSL_OSTYPE" ]]; then
   # echo "Running in WSL2"
   IS_CYGWIN=false
   IS_WSL2=true
+  source_file "${HOME}/.bashrc_wsl2"
 else
   echo "Running unknown environment"
   IS_CYGWIN=false
   IS_WSL2=false
 fi
-
-[[ "$IS_WSL2" == true ]] && alias cygpath=wslpath
 
 eval "$(dircolors -b ~/.dircolors)"
 export LS_OPTIONS="-p --color=auto --group"
@@ -250,15 +250,6 @@ if _vagrant_version=$(which vagrant 2> /dev/null && vagrant -v | grep -Po '\d+\.
   . "/c/Program Files/Vagrant/embedded/gems/gems/vagrant-${_vagrant_version}/contrib/bash/completion.sh"
 fi
 
-if [[ "$IS_CYGWIN" == true ]] ; then
-  STARSHIP_CONFIG_FILE=~/.config/starship.toml
-  if [ ! -f $STARSHIP_CONFIG_FILE ]; then 
-    echo >&2 "could not find $STARSHIP_CONFIG_FILE"
-  fi
-  STARSHIP_CONFIG=$(cygpath -m $STARSHIP_CONFIG_FILE)
-  export STARSHIP_CONFIG
-fi
-
 function set_starship_windows_title() {
   if branch=$(git branch --show-current 2> /dev/null); then
     title="$branch/$(git rev-parse --show-prefix)"
@@ -267,5 +258,3 @@ function set_starship_windows_title() {
   fi
   echo -ne "\033]0;$title\007"
 }
-
-[[ "$IS_WSL2" == true ]] && export starship_precmd_user_func="set_starship_windows_title" && eval "$(starship init bash)"

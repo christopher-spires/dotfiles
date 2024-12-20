@@ -1,0 +1,25 @@
+#!/bin/bash
+command_not_found_handle() {
+  # inspired somewhat by: https://www.linuxjournal.com/content/bash-command-not-found
+  local cmd="$1.exe"
+  # ability to run windows command without exe extension
+  if command -v "$cmd" &> /dev/null; then
+    "$cmd" "${@:2}"
+    return $?
+  # this should be default behavior: from /etc/bash.bashrc
+  elif [ -x /usr/lib/command-not-found ] || [ -x /usr/share/command-not-found/command-not-found ]; then
+    # check because c-n-f could've been removed in the meantime
+    if [ -x /usr/lib/command-not-found ]; then
+      /usr/lib/command-not-found -- "$1"
+      return $?
+    elif [ -x /usr/share/command-not-found/command-not-found ]; then
+      /usr/share/command-not-found/command-not-found -- "$1"
+      return $?
+    else
+      printf "%s: command not found\n" "$1" >&2
+      return 127
+    fi
+  else
+    return 127;
+  fi
+}

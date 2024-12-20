@@ -202,39 +202,38 @@ function setmysql () {
   esac
 }
 
-if [[ "$IS_CYGWIN" == true ]] ; then
-  function sudo {
-    cygstart --action=runas "$@"
-  }
-fi
-
-function convert_command() {
-  # some commands don't understand cygwin decirated file paths.
-  # If the argument is a file, replace the argument with the "windows" path.
-  local -n commands="$1"
-  local -n converted_args="$2"
+function convert_args() {
+  local -n converted_args="$1"
   local index
-  # local args=("$@")
   for index in $(seq 0 ${#converted_args[@]}) ; do
     case "${converted_args[index]}" in
       # do not attempt to convert options
       -*) continue;;
-      *)  [ -e "${converted_args[index]}" ] && _args[index]="$(cygpath -w "${converted_args[index]}")";;
+      *)  [ -e "${converted_args[index]}" ] && converted_args[index]="$(cygpath -w "${converted_args[index]}")";;
     esac
   done
-  "${commands[@]}" "${converted_args[@]}"
 }
 
 function bat() {
-  local _commands=( "$(which bat)" )
+  local _command
   local _args=("$@")
-  convert_command _commands _args
+  if ! _command=$(which batcat 2> /dev/null); then
+    if ! _command=$(which bat || which bat.exe); then
+      >&2 echo "bat, bat.exe, and batcat not found"
+      return 127
+    else
+      convert_args _args
+    fi
+  fi
+  "${_command}" "${_args[@]}"
 }
 
 function chezmoi() {
-  local _commands=( "$(which chezmoi)" )
+  local _command
+  _command=$(which chezmoi || which chezmoi.exe)
   local _args=("$@")
-  convert_command _commands _args
+  convert_args _args
+  "$_command" "${_args[@]}"
 }
 
 function cm() {
@@ -249,25 +248,18 @@ else
 fi
 
 function npp() { 
-  local _commands=( setsid CMD /C "$(cygpath -w "C:\Program Files\Notepad++\notepad++.exe")" ) 
-  local _args=("$@")
-  convert_command _commands _args
+  local _command _args
+  _command=$(cygpath -u "C:\Program Files\Notepad++\notepad++.exe")
+  _args=("$@")
+  convert_args _args
+  setsid "${_command}" "${_args[@]}" &> /dev/null
 }
 
 function idea() { 
-  # local _command=( setsid CMD /C "$(cygpath -w "$LOCALAPPDATA")/JetBrains/Toolbox/scripts/idea.cmd")
-  local _command
-  [[ "$IS_WSL2" == true ]] && 
   _command=$(which idea)
   local _args=("$@")
-  convert_command _command _args
-  # ${_command[@]} ${_args[@]}
-}
-
-function rubymine() {
-  local _commands=( setsid CMD /C "C:\Program Files\JetBrains/bin/rubymine.cmd" ) 
-  local _args=("$@")
-  convert_command _commands _args
+  convert_args _args
+  setsid "${_command}" "${_args[@]}" &> /dev/null
 }
 
 function nppgit() { '/proc/cygdrive/c/Program Files/Notepad++/notepad++.exe' -multiInst -nosession -notabbar -noPlugin -n3 "$(cygpath -w "$*")"; }
