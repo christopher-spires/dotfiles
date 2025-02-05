@@ -40,7 +40,8 @@ ERROR_COLOR="${LIGHT_RED}"
 
 LIST_COLOR="${LIGHT_GREEN}"
 
-intellij=/proc/cygdrive/c/Users/$USER/AppData/Local/JetBrains/Toolbox/scripts/idea.cmd
+#intellij=/proc/cygdrive/c/Users/$USER/AppData/Local/JetBrains/Toolbox/scripts/idea.cmd
+intellij=$(which idea || /c/Users/$USER/AppData/Local/JetBrains/Toolbox/scripts/idea)
 vscode=code
 
 debug() {
@@ -57,6 +58,11 @@ error() {
 
 list() {
   echo -e "${LIST_COLOR}$*${ANSI_DEFAULT}"
+}
+
+batOrBatcat() {
+  local _command=$(which bat || which batcat)
+  "$_command" $@
 }
 
 
@@ -165,8 +171,8 @@ git_add() {
 }
 
 git_diff() {
-  debug git_diff
-  git diff -b "$file"
+  debug git_diff $diff_option
+  git diff $diff_option "$file"
 }
 
 git_Diff() {
@@ -180,7 +186,8 @@ style() {
   # formatter=256;
   # pygmentize -f ${formatter} -O style=${style} $file
   # highlight -O "${output}" --canvas=100 --style="${style}" "$file"
-  bat "$file"
+  [[ -z $file ]] && error "no file selected" && return
+  "$(which bat || which batcat)" "$file"
 }
 
 git_reset() {
@@ -200,7 +207,7 @@ git_list() {
 }
 
 set_index() {
-  echo not implemented
+  warn not implemented
 }
 
 edit_file() {
@@ -228,27 +235,28 @@ confirm() {
 }
 
 menu() {
-  debug opt="$opt"
-  until [ "$opt" = "q" ];
+  # debug opt="$opt"
+  local _opt
+  until [ "$_opt" = "q" ];
   do
-    prompt="(d|D)iff (s)tyle (N)ext-style (a)dd (r)eset (n)ext (p)revious (l)ist (i)ndex (e)dit (v)scode (M)odified (O)ther (C)heckout (q)uit :"
+    prompt="(d)iff (s)tyle (o)ptions (a)dd (r)eset (n)ext (p)revious (l)ist (i)ndex (e)dit (v)scode (M)odified (O)ther (C)heckout (q)uit :"
 	# read -r -t 1 -n 10000 discard
 	# while read -r -t 0; do read -n 256 -r -s; done
 	# progress_prompt="$(progress)"
 	# file_prompt="$(warn "$file")"
 	echo "$(progress) $(warn "${file}")"
 	echo -n "$prompt"
-    read -r -n 1 -s opt
+  read -r -n 1 -s _opt
 	echo    
 	
-	case ${opt} in
+	case ${_opt} in
 	  "C") git_checkout;;
 	  "M") set_modified_files;;
 	  "O") set_other_files;;
     "d") select_view;;
 	  "D") git_Diff;;
 	  "s") style;;
-	  "o") next_output;;
+	  "o") options;;
 	  "N") next_style;;
 	  "P") previous_style;;
     "a") git_add;;
@@ -260,41 +268,77 @@ menu() {
 	  "e") edit_file;;
     "v") edit_file_vscode;;
     "q") quit; break;;
-	  *) echo "invalid option: $opt"; read -r -t 1 -n 10000 _;;
+	  *) echo "invalid option: $_opt"; read -r -t 1 -n 10000 _;;
 	esac
   done
 }
 
 select_view() {
-  if [[ $(is_version_controlled) ]]; then git_diff; else style; fi
+  if $(is_version_controlled); then git_diff; else style; fi
 }
 
 is_version_controlled() {
-  echo "$file=file"
+  # echo "$file=file"
   git ls-files --error-unmatch "$file" >& /dev/null
 }
 
 options() {
-	case ${opt} in
-	  "d") diff_options;;
-	  "f") file_options;;
-    "q") quit; return;;
-	  *) echo "invalid option: $opt"; read -r -t 1 -n 10000 _;;
-	esac
+  local _opt
+  until [ "$_opt" = "q" ];
+  do
+    prompt="options: (d)iff (f)ile (q)uit: "
+    echo
+    echo -n "$prompt"
+    read -r -n 1 -s _opt
+	  case ${_opt} in
+	    "d") diff_options;;
+	    "f") file_options;;
+      "q") quit; break;;
+	    *) echo "invalid option: $_opt"; read -r -t 1 -n 5000 _;;
+	  esac
+  done
 }
 
 diff_options() {
-	case ${opt} in
-	  "i") ignore_blankspace;;
-	  "b") blankspace_matters;;
+  local _opt
+  until [ "$_opt" = "q" ];
+  do
+    prompt="diff: current: $diff_option (b)lankspace changes ignored (w)hitespace ignored (c)lear (q)uit: "
+    echo
+    echo -n "$prompt"
+    read -r -n 1 -s _opt
+	  case ${_opt} in
+	    "b") diff_option="-b";;
+      "c") diff_option="";;
+	    "w") diff_option="-w";;
       "q") quit; return;;
-	  *) echo "invalid option: $opt"; read -r -t 1 -n 10000 _;;
-	esac
+	    *) echo "invalid option: $_opt"; read -r -t 1 -n 5000 _;;
+	  esac
+  done
+  warn "diff_option=$diff_option"
+}
+
+file_options() {
+  local _opt
+  until [ "$_opt" = "q" ];
+  do
+    prompt="file: (m)odified (o)ther (q)uit: "
+    echo
+    echo -n "$prompt"
+    read -r -n 1 -s _opt
+    case ${_opt} in
+      "m") set_modified_files;;
+      "o") set_other_files;;
+      "q") quit; return;;
+      *) echo "invalid option: $_opt"; read -r -t 1 -n 5000 _;;
+    esac
+  done
 }
 
 set_modified_files
 set_style
 set_output
+diff_option="-b"
 
 menu
 debug exit script

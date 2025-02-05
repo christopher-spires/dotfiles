@@ -209,7 +209,7 @@ function convert_args() {
     case "${converted_args[index]}" in
       # do not attempt to convert options
       -*) continue;;
-      *)  [ -e "${converted_args[index]}" ] && converted_args[index]="$(cygpath -w "${converted_args[index]}")";;
+      *)  [ -e "${converted_args[index]}" ] && converted_args[index]="$(cygpath -m "${converted_args[index]}")";;
     esac
   done
 }
@@ -252,14 +252,16 @@ function npp() {
   _command=$(cygpath -u "C:\Program Files\Notepad++\notepad++.exe")
   _args=("$@")
   convert_args _args
-  setsid "${_command}" "${_args[@]}" &> /dev/null
+  "${_command}" "${_args[@]}" &> /dev/null
 }
 
 function idea() { 
+  local _command _args _commands
   _command=$(which idea)
-  local _args=("$@")
+  _args=("$@")
   convert_args _args
-  setsid "${_command}" "${_args[@]}" &> /dev/null
+  _commands=( setsid "$_command" "${_args[@]}" )
+  bash -c "$(printf "'%s' " "${_commands[@]}") &> /dev/null &"
 }
 
 function nppgit() { '/proc/cygdrive/c/Program Files/Notepad++/notepad++.exe' -multiInst -nosession -notabbar -noPlugin -n3 "$(cygpath -w "$*")"; }

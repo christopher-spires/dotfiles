@@ -30,6 +30,7 @@ m [bcdehipqrstuvX] [options] [<goal(s)>] [<phase(s)>]
   t test
   U --update-snapshots
   v verify
+  w wrapper:wrapper
   X --debug  
 EOF
 }
@@ -97,6 +98,7 @@ function m() {
       t) COMMAND+=("test") ;;
       U) COMMAND+=("--update-snapshots") ;;
       v) COMMAND+=("verify") ;;
+      w) COMMAND+=("wrapper:wrapper" "-Dtype=only-script") ;;
       X) COMMAND+=("--debug") ;;
       *) PASSTHROUGH=true;;
     esac
@@ -143,9 +145,14 @@ function m() {
   if [ ! -e ./pom.xml ] && [ -e ./modules/pom.xml ]; then
     cd modules || return 1;
   fi
+  if [ -x ./mvnw ]; then
+    mvn=./mvnw
+  else
+    mvn=mvn
+  fi
   #set -x
-  [[ "${#CLEAN_COMMAND[@]}" -gt 0 ]] && CLEAN_COMMAND=(mvn "${CLEAN_COMMAND[@]}" )
-  [[ "${#COMMAND[@]}" -gt 0 ]] && COMMAND=(mvn "${COMMAND[@]}" )
+  [[ "${#CLEAN_COMMAND[@]}" -gt 0 ]] && CLEAN_COMMAND=("$mvn" "${CLEAN_COMMAND[@]}" )
+  [[ "${#COMMAND[@]}" -gt 0 ]] && COMMAND=("$mvn" "${COMMAND[@]}" )
   [[ ${#CLEAN_COMMAND} -gt 0 ]] && printf "%s\n" "${CLEAN_COMMAND[*]}"
   [[ ${#COMMAND} -gt 0 ]] && printf "%s\n" "${COMMAND[*]}"
   
