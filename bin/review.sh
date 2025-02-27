@@ -61,8 +61,9 @@ list() {
 }
 
 batOrBatcat() {
-  local _command=$(which bat || which batcat)
-  "$_command" $@
+  local _command
+  _command=$(which bat || which batcat)
+  "$_command" "$@"
 }
 
 

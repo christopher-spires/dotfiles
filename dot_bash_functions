@@ -314,3 +314,16 @@ setupcygwin() {(
 hg() {
   history | grep "$@"
 }
+
+ij() {
+    local file
+    if [ ${#@} -eq 0 ]; then
+      [[ -e pom.xml ]] && file=pom.xml
+      [[ -e build.gradle ]] && file=build.gradle
+      >&2 echo "idea $file" 
+      idea "$file"
+    else
+      >&2 echo "idea " "$@" 
+      idea "$@"
+    fi
+}

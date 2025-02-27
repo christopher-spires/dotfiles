@@ -153,8 +153,8 @@ function m() {
   #set -x
   [[ "${#CLEAN_COMMAND[@]}" -gt 0 ]] && CLEAN_COMMAND=("$mvn" "${CLEAN_COMMAND[@]}" )
   [[ "${#COMMAND[@]}" -gt 0 ]] && COMMAND=("$mvn" "${COMMAND[@]}" )
-  [[ ${#CLEAN_COMMAND} -gt 0 ]] && printf "%s\n" "${CLEAN_COMMAND[*]}"
-  [[ ${#COMMAND} -gt 0 ]] && printf "%s\n" "${COMMAND[*]}"
+  [[ ${#CLEAN_COMMAND} -gt 0 ]] && >&2 printf "%s\n" "${CLEAN_COMMAND[*]}"
+  [[ ${#COMMAND} -gt 0 ]] && >&2 printf "%s\n" "${COMMAND[*]}"
   
   "${CLEAN_COMMAND[@]:-:}" && "${COMMAND[@]:-:}"
   #set +x

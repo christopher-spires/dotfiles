@@ -13,10 +13,13 @@ command_timeout = 1000
 disabled = true
 
 [directory]
-# truncate_to_repo = false
+truncation_length = 9
+truncate_to_repo = false
 use_os_path_sep = false
 style = "yellow"
-
+repo_root_style = "bold yellow"
+# before_repo_root_style = ""
+repo_root_format= '[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) '
 
 [git_branch]
 # disabled = true
@@ -33,8 +36,10 @@ symbol = ""
 # disabled = true
 
 [git_status]
-disabled = true
+# disabled = true
 # stashed = ""
+
+# style_untracked= "bold blue"
 
 [java]
 disabled = true

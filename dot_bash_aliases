@@ -40,3 +40,5 @@ alias egrep='egrep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias ls='ls -h --file-type --color=auto'     # classify files in colour
 alias la='ls -A'                              # all but . and ..
+
+
