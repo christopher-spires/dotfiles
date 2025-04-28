@@ -51,6 +51,7 @@ function m() {
   local revisionParam
   # revisionParam="-Drevision=local-$(__git_ps1 "%s")-SNAPSHOT"
   revisionParam="-Drevision=local-$(git symbolic-ref --short HEAD)-SNAPSHOT"
+  toolchainsFile=~/.m2/toolchains.xml
   # set -x
   [[ $numCommands -eq 0 ]] && m_usage_commands && return;
 
@@ -103,6 +104,7 @@ function m() {
       *) PASSTHROUGH=true;;
     esac
   done
+  [[ -e ${toolchainsFile} ]] && COMMAND+=("-P" "toolchains")
   if [ "$PASSTHROUGH" = true ]; then
     COMMAND=("$@")
     unset CLEAN_COMMAND
@@ -162,9 +164,9 @@ function m() {
 complete -o default -F _mvn -o nospace m
 
 function selectmvn() {
-  local DEV_DIR=/c/dev
-  local MAVEN_DIR="$DEV_DIR/maven"
-  local mvn_symlink="$MAVEN_DIR/home"
+  local OPT_DIR=/opt
+  local MAVEN_DIR="$OPT_DIR/maven"
+  local mvn_symlink="$MAVEN_DIR/maven"
   local MAVENS mvn MVN_CURRENT
   shopt -s nullglob
   
@@ -186,3 +188,7 @@ function selectmvn() {
 
   ln -s "$mvn" "$mvn_symlink"
 }
+
+MAVEN_HOME=/opt/maven/maven
+PATH=$MAVEN_HOME/bin:$PATH
+export PATH

@@ -291,7 +291,13 @@ function selectjdk() {
 }
 
 yq() {
-  docker run --rm -i -v "${PWD}":/workdir mikefarah/yq "$@"
+  podman run --rm -i -v "${PWD}":/workdir mikefarah/yq "$@"
+}
+
+curl() {
+  # docker run --rm curlimages/curl:latest "$@"
+  # enhancement: look for -o option and if relative/abs path, use that vs PWD
+  podman run --rm -it -v "$PWD:/work" -w /work quay.io/curl/curl:latest "$@"
 }
 
 confluent() {

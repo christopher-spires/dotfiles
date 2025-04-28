@@ -55,6 +55,7 @@ shopt -s direxpand
 # /etc/profile.d/bash_completion.sh when the package bash_completetion
 # is installed.  Any completions you add in ~/.bash_completion are
 # sourced last.
+source /etc/profile.d/bash_completion.sh
 
 # History Options
 #

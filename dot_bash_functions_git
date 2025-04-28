@@ -42,13 +42,13 @@ ___git_complete gstatus _git_status
 function gwt() { git worktree "$@"; }
 ___git_complete gwt _git_worktree
 # function gwta() { git worktree add "$@" && gwthwt; }
-function gwta() { git worktree add "$@"; }
+# function gwta() { git worktree add "$@"; }
 function gwta() {
     local branch=$1
     shift
     local createBranch='-b'
     git rev-parse --quiet --verify "$branch" > /dev/null \
-    && echo "branch $branch exists" \
+    && >&2 echo "branch $branch exists" \
     && createBranch=
     git worktree add "$branch" $createBranch "$branch" "$@";
 }
@@ -80,6 +80,24 @@ function gwtr() {
   done
   git worktree remove "$@";
   [[ ! -d $PWD ]] && cd ..
+}
+
+function ghide() {
+  local toplevel ignoreFile directory relativeDirectory
+  toplevel="$(git rev-parse --show-toplevel)" > /dev/null || return 1
+  ignoreFile="${toplevel}/.git/info/exclude"
+  directory=$*
+  relativeDirectory=$(realpath --relative-to="$toplevel" "$toplevel/$directory")
+  if [ -d "$toplevel/$relativeDirectory" ]; then
+    if git check-ignore "$relativeDirectory" > /dev/null; then
+      >&2 echo "directory is already ignored: $directory"
+    else
+      echo "$relativeDirectory" >> "$ignoreFile"
+    fi
+  else
+    echo "not a directory at $toplevel: $directory"
+  fi
+
 }
 
 function gwthwt() {

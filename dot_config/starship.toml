@@ -1,7 +1,7 @@
 # https://starship.rs/config/
 "$schema" = 'https://starship.rs/config-schema.json'
 
-command_timeout = 1000
+command_timeout = 2000
 
 # [azure]
 # disabled = false
@@ -19,14 +19,14 @@ use_os_path_sep = false
 style = "yellow"
 repo_root_style = "bold yellow"
 # before_repo_root_style = ""
-repo_root_format= '[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) '
+# repo_root_format= '[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) '
 
 [git_branch]
 # disabled = true
 style ="green"
 format = "[$symbol$branch(:$remote_branch) ]($style)"
 only_attached = true
-ignore_branches = ['_top-core-cbs']
+# ignore_branches = ['_top-core-cbs']
 symbol = ""
 
 # [git_commit]
