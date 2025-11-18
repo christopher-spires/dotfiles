@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # review.sh:
 # requirements: bat intellij/vscode for opening in editor.
 # created to go through the file using command line for git commits
@@ -188,7 +188,7 @@ style() {
   # pygmentize -f ${formatter} -O style=${style} $file
   # highlight -O "${output}" --canvas=100 --style="${style}" "$file"
   [[ -z $file ]] && error "no file selected" && return
-  "$(which bat || which batcat)" "$file"
+  "$(which bat || which batcat || which bat.exe)" "$file"
 }
 
 git_reset() {

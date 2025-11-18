@@ -104,7 +104,7 @@ function m() {
       *) PASSTHROUGH=true;;
     esac
   done
-  [[ -e ${toolchainsFile} ]] && COMMAND+=("-P" "toolchains")
+  # [[ -e ${toolchainsFile} ]] && COMMAND+=("-P" "toolchains")
   if [ "$PASSTHROUGH" = true ]; then
     COMMAND=("$@")
     unset CLEAN_COMMAND

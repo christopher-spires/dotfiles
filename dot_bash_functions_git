@@ -14,8 +14,58 @@ function gco() { git checkout "$@"; }
 ___git_complete gco _git_checkout
 function gcommit() { git commit "$@"; }
 ___git_complete gcommit _git_commit
+function gcm() { 
+  local args
+  if [ "$#" -eq 1 ]; then
+    args=('-m')
+  fi
+  args+=("$@")
+  git commit "${args[@]}"; 
+}
+___git_complete gcm _git_commit
+
+function gclone() { 
+  local dir=""
+  local repo=""
+  local git_dir=".git"
+  local args=()
+  for arg in "$@"; do
+    if [[ "$arg" == -* ]]; then
+      opts+=("$arg")
+    else
+      args+=("$arg")
+    fi
+  done
+
+  if [ "${#args[@]}" -eq 1 ]; then
+    repo="${args[0]}"
+    dir="$(basename "$repo" .git)"
+  elif [ "${#args[@]}" -ge 2 ]; then
+    repo="${args[0]}"
+    dir="${args[1]}"
+  fi
+  mkdir -p "$dir" || return 1
+  cd "$dir" || return 2
+  git clone --bare --single-branch "${opts[@]}" "$repo" "$git_dir"
+  local cloned=$?
+  [[ $cloned -ne 0 ]] && return $cloned
+  # echo "gitdir: ./$repo_dir" > .git
+  git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" || return $?
+  git fetch origin || return $?
+  local remote_branch remote local_branch
+  remote_branch=$(git rev-parse --abbrev-ref refs/remotes/origin/HEAD) || return $?
+  remote=$(git remote) || return $?
+  local_branch=${remote_branch##"$remote/"}
+  if git rev-parse --verify --quiet "$local_branch" ; then
+    git branch --set-upstream-to="$remote_branch" "$local_branch" || return $?
+  fi 
+  # cd "$dir" || return 1
+}
+___git_complete gclone _git_clone
+
 function gdiff() { git diff "$@"; }
 ___git_complete gdiff _git_diff
+
 function gls() { git ls-files "$@"; }
 # list files that are modified
 # shellcheck disable=SC2120
@@ -41,17 +91,6 @@ function gstatus() { git status "$@"; }
 ___git_complete gstatus _git_status
 function gwt() { git worktree "$@"; }
 ___git_complete gwt _git_worktree
-# function gwta() { git worktree add "$@" && gwthwt; }
-# function gwta() { git worktree add "$@"; }
-function gwta() {
-    local branch=$1
-    shift
-    local createBranch='-b'
-    git rev-parse --quiet --verify "$branch" > /dev/null \
-    && >&2 echo "branch $branch exists" \
-    && createBranch=
-    git worktree add "$branch" $createBranch "$branch" "$@";
-}
 function gwtl() { git worktree list "$@"; }
 
 function gwtch() {
@@ -186,7 +225,8 @@ function cdwt() {
       esac
     done <<< "${allWorktrees[@]}"
 
-    [[ "${#keyValue[@]}" -le 1 ]] && echo "no worktress" && return 1;
+    [[ "${#keyValue[@]}" -eq 1 ]] && cd "${keyValue[@]}" && return 0;
+    [[ "${#keyValue[@]}" -eq 0 ]] && echo "no worktress" && return 1;
 
     local BRANCH_INDEX=1
     local branchNumber=0
@@ -302,6 +342,27 @@ function gabwt() {
 # gwtadd feature my-awesome-feature
 }
 
+# function gwta() { git worktree add "$@" && gwthwt; }
+# function gwta() { git worktree add "$@"; }
+function gwta() {
+    local branch=$1
+    shift
+    # local createBranch='-b'
+    # local remote
+    # remote=$(git remote)
+    # git rev-parse --quiet --verify "$branch" > /dev/null \
+    # && >&2 echo "branch $branch exists" \
+    # && createBranch=
+    # git worktree add "$branch" $createBranch "$branch" "$@";
+    local top
+    top=$(git rev-parse --git-common-dir)/..
+    branch_flag=-b
+    if git rev-parse --verify --quiet "$branch"; then
+      branch_flag=
+    fi
+    git worktree add "$top/$branch" $branch_flag "$branch" "$@";
+}
+
 function gaddwt() {
   [ $# -ne 1 ] \
     && echo usage > /dev/null \
@@ -317,7 +378,9 @@ function gaddwt() {
   # git branch -c "$1" \
   #   && 
     gwta "$1" || return 1
-    cd "$1" || return 2
+    local top
+    top=$(git rev-parse --git-common-dir)/..
+    cd "$top/$1" || return 2
     gwtrel || return 3
     # [ ! -f ./pom.xml ] && [ -f ../pom.xml ] && cp ../pom.xml .
     # if [ -f ./pom.xml ]; then
@@ -328,12 +391,17 @@ function gaddwt() {
 }
 
 function gsetup() {
-  upstream="$(git rev-parse --abbrev-ref --symbolic-full-name \@\{u\})"
+  git rev-parse --abbrev-ref --symbolic-full-name "@{u}"
+  hasUpstream=$?
+  [ $hasUpstream -eq 0 ] && return
+  local remote branch
   remote="$(git remote)"
   branch="$(git branch --show-current)"
-  if [ "$upstream" != "$remote/$branch" ];
-  then
-    git push origin HEAD
-    git branch -u "$remote/$branch"
-  fi
+  git push -u "$remote" "$branch"
+}
+
+function grepo() {
+  local remote
+  remote="$(git remote)"
+  git remote get-url "$remote" | sed -e 's#:#/#' -e 's#git@#https://#' -e 's#.git$##'
 }

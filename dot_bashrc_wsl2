@@ -4,3 +4,9 @@ source_file "${HOME}/.bash_functions_wsl2"
 
 export starship_precmd_user_func="set_starship_windows_title" 
 eval "$(starship init bash)"
+
+export GRADLE_HOME="/opt/gradle/gradle/"
+path_append "${GRADLE_HOME}/bin"
+
+export JAVA_HOME="/usr/lib/jvm/temurin-21-jdk-amd64"
+path_append "${JAVA_HOME}/bin"

@@ -23,3 +23,38 @@ command_not_found_handle() {
     return 127;
   fi
 }
+
+function idea() {
+  local dist="$HOME/.cache/JetBrains/RemoteDev/dist"
+  local ij
+  # find:
+  #  -maxdepth 1 to not recurse into subdirs
+  #  -name to only find dirs that match the pattern
+  #  -type d to only find dirs
+  #  -printf '%P\n' to print only the dir name without the path
+  # sort:
+  #  -t splits to 2 groups.
+  #  -k says 2nd group starting with the 1st character.
+  #  -V is symantic version sort
+  ij=$(find "$dist" -maxdepth 1 -name "*_ideaIU-*" -type d -printf '%P\n' | sort -V -t'-' -k 2.1 | tail -1)
+
+  if [[ -z "$ij" ]]; then
+    echo "No IntelliJ IDEA version found in $dist" >&2
+    return 1
+  fi
+
+  local exe_path="$dist/$ij/bin/idea.sh"
+  if [[ ! -x "$exe_path" ]]; then
+    echo "Executable not found: $exe_path" >&2
+    return 2
+  fi
+
+  "$exe_path" "$@"
+}
+
+JAVA_17_HOME="/usr/lib/jvm/temurin-17-jdk-amd64"
+JAVA_21_HOME="/usr/lib/jvm/temurin-21-openjdk-amd64"
+JAVA_25_HOME="/usr/lib/jvm/temurin-25-openjdk-amd64"
+JAVA_8_HOME="/usr/lib/jvm/temurin-8-openjdk-amd64"
+
+export JAVA_8_HOME JAVA_17_HOME JAVA_21_HOME JAVA_25_HOME 

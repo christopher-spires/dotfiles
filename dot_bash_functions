@@ -290,15 +290,65 @@ function selectjdk() {
   echo "selected: $jdk"
 }
 
-yq() {
-  podman run --rm -i -v "${PWD}":/workdir mikefarah/yq "$@"
-}
+# yq() {
+#   # podman run --rm -i -v "${PWD}":/workdir mikefarah/yq "$@"
+#   podman run --rm -i -v "$(wslpath -w "${PWD}")":/workdir mikefarah/yq "$@"
+# }
 
 curl() {
   # docker run --rm curlimages/curl:latest "$@"
   # enhancement: look for -o option and if relative/abs path, use that vs PWD
   podman run --rm -it -v "$PWD:/work" -w /work quay.io/curl/curl:latest "$@"
 }
+
+
+# yq2() {
+#   local workdir
+  
+#   # Resolve any symlinks and get absolute path
+#   local resolved_pwd
+#   if command -v realpath &> /dev/null; then
+#     resolved_pwd="$(realpath "${PWD}")"
+#   else
+#     resolved_pwd="${PWD}"
+#   fi
+  
+#   # Ensure the directory exists and is accessible
+#   if [[ ! -d "${resolved_pwd}" ]]; then
+#     echo "Error: Current directory '${resolved_pwd}' does not exist" >&2
+#     return 1
+#   fi
+  
+#   if [[ ! -r "${resolved_pwd}" ]]; then
+#     echo "Error: Cannot read current directory '${resolved_pwd}'" >&2
+#     return 1
+#   fi
+  
+#   # Check if we're in WSL
+#   if [[ -n "${WSL_DISTRO_NAME}" ]] || grep -qi microsoft /proc/version 2>/dev/null; then
+#     # In WSL, use the Linux path directly
+#     workdir="${resolved_pwd}"
+    
+#     # Verify Podman can access WSL filesystem
+#     if [[ "${workdir}" == /mnt/* ]]; then
+#       echo "Warning: You're in a Windows mount point. Consider using a native WSL path." >&2
+#     fi
+#   else
+#     # On native Windows/Cygwin, convert to Windows path
+#     if command -v cygpath &> /dev/null; then
+#       workdir="$(cygpath -m "${resolved_pwd}")"
+#     else
+#       workdir="${resolved_pwd}"
+#     fi
+#   fi
+  
+#   # Debug output (remove after testing)
+#   echo "Debug: PWD=${PWD}" >&2
+#   echo "Debug: resolved_pwd=${resolved_pwd}" >&2
+#   echo "Debug: workdir=${workdir}" >&2
+  
+#   podman run --rm -i -v "${workdir}":/workdir -w /workdir mikefarah/yq "$@"
+# }
 
 confluent() {
   docker run --rm -it \
@@ -332,4 +382,228 @@ ij() {
       >&2 echo "idea " "$@" 
       idea "$@"
     fi
+}
+
+createCharts() {
+  local usage="Usage $0 [prefix]"
+  shopt -s nullglob
+  local values_files=(charts/values-*.yaml)
+  shopt -u nullglob
+  if [[ ${#values_files[@]} -eq 0 ]]; then
+    echo "No values files found. Exiting."
+    return 1
+  fi
+
+  local prefix=$1
+  if [[ -z "$prefix" ]]; then
+    read -p "Enter output file prefix: " prefix
+  fi
+
+  local output_dir=./out
+  mkdir -p $output_dir
+
+  local values_file="charts/values.yaml"
+  local values_arg=""
+  if [[ -f "$values_file" ]]; then
+    values_arg=$values_file
+  fi
+
+  for file in "${values_files[@]}"; do
+    # Extract environment name from filename (values-<env>.yaml)
+    local name="${file##*/values-}"
+    name="${name%.yaml}"
+    helm template /git/anf/template/master/charts ${values_arg:+-f} $values_arg -f charts/values-$name.yaml > "$output_dir/$prefix$name.yaml"
+  done
+}
+
+compareCharts() {
+  local output_dir=./out
+  local usage="Usage: $0 [prefix] [other prefix]"
+  local prefix=$1
+  local otherPrefix=$2
+
+  local files file
+  files=("$output_dir"/*dv.yaml)
+  prefixes=()
+  for f in "${files[@]}"; do
+    [[ -f "$f" ]] || continue
+    file=${f/#dv.yaml}
+    file=${file%%dv.yaml}
+    file=${file##"${output_dir}/"}
+    prefixes+=("$file")
+  done
+
+  if [[ ${#prefixes[@]} -eq 0 ]]; then
+    echo "No prefixes found in $output_dir."
+    return 1
+  fi
+
+  if [[ -z "$prefix" ]]; then
+    prefix=$(iselect -a -Q cancel "${prefixes[@]}")
+    [[ "$prefix" == "cancel" ]] && return 1
+  fi
+  if [[ -z "$otherPrefix" ]]; then
+    otherPrefix=$(iselect -a -Q cancel "${prefixes[@]}")
+    [[ "$otherPrefix" == "cancel" ]] && return 1
+  fi
+
+  if [[ "$prefix" == "$otherPrefix" ]]; then
+    echo "Error: Prefixes must be different."
+    return 1
+  fi
+  
+  local name_prefix=$prefix
+  if [[ -z "$name_prefix" ]]; then
+    name_prefix="$otherPrefix"
+  fi
+  echo "name_prefix ${name_prefix}"
+  shopt -s nullglob
+  files=("$output_dir/${name_prefix}"*".yaml")
+  shopt -u nullglob
+  echo "files: ${files[*]}"
+  for file in "${files[@]}"; do
+    # Extract environment name from filename
+    local name="${file##*/"$name_prefix"}"
+    name="${name%.yaml}"
+
+    filler=$(printf '#%.0s' $(seq 1 ${#name}))
+    border="######"
+    printf '%s#%s#%s\n%s %s %s\n%s#%s#%s\n' "$border" "$filler" "$border" "$border" "$name" "$border" "$border" "$filler" "$border"
+    diff -y "$output_dir/$prefix$name.yaml" "$output_dir/$otherPrefix$name.yaml"
+  done
+}
+
+sortCharts() {
+  local dir=./charts
+  local value_file
+  local identity_file="$HOME/.user_assigned_identity"
+  declare -A user_assigned_identity 
+  if [[ -f "$identity_file" ]]; then
+    while IFS="=" read -r key value; do
+      key="${key%%#*}"   # Remove comments from key
+      key="${key//[[:space:]]/}" # Trim whitespace
+      [[ -z "$key" || "${key:0:1}" == "#" ]] && continue
+      user_assigned_identity["$key"]="$value"
+      envs+=("$key")
+    done < <(sed 's/#.*$//' "$identity_file")
+  else
+    >&2 echo "Could not find identity file '$identity_file'"
+    return 1
+  fi
+  for key in "${!user_assigned_identity[@]}"; do
+    value_file=${dir}/values-${key}.yaml
+    [ -f "$value_file" ] || continue
+    sortChart "$value_file"
+  done
+  value_file=$dir/values.yaml
+  [ -f "$value_file" ] || return
+  sortChart "$value_file"
+}
+
+sortChart() {
+  local input_file="$1"
+  # local -n user_assigned_identity="$2"
+  local env_name=""
+  
+  # Validate input file exists
+  if [[ ! -f "$input_file" ]]; then
+    echo "Error: File '$input_file' does not exist" >&2
+    return 1
+  fi
+  
+  # Extract env from filename using bash variable expansion
+  local filename="${input_file##*/}"  # Remove path, keep filename only
+  if [[ "$filename" =~ ^values-(.+)\.yaml$ ]]; then
+    env_name="${BASH_REMATCH[1]}"
+  fi
+  
+  # Define userAssignedIdentity mapping based on environment
+  declare -A user_assigned_identity
+  local identity_file="$HOME/.user_assigned_identity"
+  if [[ -f "$identity_file" ]]; then
+    while IFS="=" read -r key value; do
+      [[ -z "$key" || -z "$value" ]] && continue
+      user_assigned_identity["$key"]="$value"
+    done < "$identity_file"
+  else
+    >&2 echo "Could not find identity file '$identity_file'"
+  fi
+  
+  # Build yq expression for sorting
+  local yq_expr='to_entries | 
+  (map(select(.key == "env")) + 
+   (map(select(.key != "env")) | sort_by(.key) |
+    map(select(.key < "volume")) +
+    map(select(.key == "volumeenabled")) +
+    map(select(.key == "volume")) +
+    map(select(.key > "volumeenabled"))
+   )) | 
+  from_entries'
+
+  # If we have an env name from filename, add/update the env section
+  if [[ -n "$env_name" && -n "${user_assigned_identity[$env_name]}" ]]; then
+    # Build env array with spring.profiles.active first, then userAssignedIdentity if available
+    yq_expr="$yq_expr"' |
+    .env = [{"name": "spring.profiles.active", "value": "'"$env_name"'"},{"name": "userAssignedIdentity", "value": "'"${user_assigned_identity[$env_name]}"'"}]'
+    
+    # # Add userAssignedIdentity entry if we have a mapping for this environment
+    # if [[ -n "$user_assigned_identity" ]]; then
+    #   yq_expr="$yq_expr"' + [{"name": "userAssignedIdentity", "value": "'"$user_assigned_identity"'"}]'
+    # fi
+    
+    # Add any existing env entries that aren't spring.profiles.active or userAssignedIdentity
+    yq_expr="$yq_expr"' + (.env // [] | map(select(.name != "spring.profiles.active" and .name != "userAssignedIdentity")))'
+  fi
+  
+  # Apply transformations and add blank lines between top-level keys
+  yq "$yq_expr" "$input_file" | \
+  awk '
+    /^[a-zA-Z_][a-zA-Z0-9_-]*:/ {
+      if (NR > 1 && !(prev_key == "volumeenabled" && $0 ~ /^volume:/)) {
+        print ""
+      }
+      prev_key = gensub(/:.*/, "", "g", $0)
+      print $0
+      next
+    }
+    { print }
+  ' | sponge "$input_file"
+}
+
+mergeMetadata() {
+  local destination_dir=./src/main/resources/META-INF
+  local destination=$destination_dir/additional-spring-configuration-metadata.json
+
+  # Find all JSON files in the destination_dir
+  local files
+  shopt -s nullglob
+  files=($(ls "${destination_dir}/additional-spring-configuration-metadata"*.json))
+  shopt -u nullglob
+  >&2 echo "files:" "${files[@]}"
+
+  jq -s '
+  {
+    groups: (map(.groups // []) | add 
+     | sort_by(.name)
+     | unique_by(.name)
+    ),
+    properties: (map(.properties // []) | add
+      | sort_by(.name)
+      | unique_by(.name)
+    ),
+    hints: (map(.hints // []) | add
+      | sort_by(.name)
+      | unique_by(.name)
+    )
+  }
+  ' "${files[@]}" | sponge $destination
+
+  for f in "${files[@]}"; do
+    [[ "$f" == "$destination" ]] && continue
+    read -p "Remove $f? [y/N]: " reply
+    case "$reply" in
+      y|Y) rm -f "$f";;
+      *) ;;
+    esac
+  done
 }
