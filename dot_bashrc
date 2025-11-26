@@ -247,8 +247,17 @@ if _vagrant_version=$(which vagrant 2> /dev/null && vagrant -v | grep -Po '\d+\.
 fi
 
 function set_starship_windows_title() {
-  if branch=$(git branch --show-current 2> /dev/null); then
-    title="$branch/$(git rev-parse --show-prefix)"
+  if git rev-parse --is-inside-work-tree &>/dev/null; then
+    project=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && project=${project%/.git} && project=${project##*/}
+    inWorkTree=$(git rev-parse --is-inside-work-tree)
+    if [ "$inWorkTree" = "true" ]; then
+      branch=" | $(git branch --show-current 2> /dev/null)"
+      path="$(git rev-parse --show-prefix 2> /dev/null)"
+      if [ -n "$path" ]; then
+        path=" | ${path%/}"
+      fi
+    fi
+    title="$project$branch$path"
   else
     title=$PWD
   fi

@@ -228,14 +228,6 @@ function bat() {
   "${_command}" "${_args[@]}"
 }
 
-function chezmoi() {
-  local _command
-  _command=$(which chezmoi || which chezmoi.exe)
-  local _args=("$@")
-  convert_args _args
-  "$_command" "${_args[@]}"
-}
-
 function cm() {
   chezmoi "$@"
 }

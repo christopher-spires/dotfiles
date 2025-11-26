@@ -45,3 +45,11 @@ function listpackages() {
 function sudo {
   cygstart --action=runas "$@"
 }
+
+function chezmoi() {
+  local _command
+  _command=$(which chezmoi || which chezmoi.exe)
+  local _args=("$@")
+  convert_args _args
+  "$_command" "${_args[@]}"
+}
