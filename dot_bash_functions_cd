@@ -57,58 +57,53 @@ cd_func ()
 }
 
 function path_remove {
-  IFS=:
-  local REMOVEPATH=( "$1" )
+  local REMOVEPATH
+  IFS=: read -r -a REMOVEPATH <<< "$1"
   for name in "${REMOVEPATH[@]}"; do
     if ( in_path "$name" ); then
       # convert it to an array
       # shellcheck disable=SC2206
-      local t=($PATH)
+      local t
+      IFS=: read -r -a t <<< "$PATH"
       # perform any array operations to remove elements from the array
       t=("${t[@]%%$name}")
       # output the new array
-      PATH="${t[*]}"
+      PATH=$(IFS=:; echo "${t[*]}");
     else
       echo "$name not in path"
     fi
   done
-  unset IFS
   path_clean
 }
 
 function path_append {
-  local NEWPATH
-  IFS=:
-  local ADDPATH=( "$1" )
+  local NEWPATH ADDPATH
+  IFS=: read -r -a ADDPATH <<< "$1"
   for name in "${ADDPATH[@]}"; do
-    in_path "$name" && echo "$name in path" && continue
+    in_path "$name" && echo "$name in path. Not appended." && continue
     NEWPATH="$NEWPATH:$name"
   done
-  unset IFS
   [[ ${#NEWPATH} ]] && PATH=${PATH}${NEWPATH}
 }
 
 function path_prepend {
-  local NEWPATH
-  IFS=:
-  local ADDPATH=( "$1" )
+  local NEWPATH ADDPATH
+  IFS=: read -r -a ADDPATH <<< "$1"
   for name in "${ADDPATH[@]}"; do
-    in_path "$name" && echo "$name in path" && continue
+    in_path "$name" && echo "$name in path. Not prepended" && continue
     NEWPATH="$NEWPATH:$name"
   done
-  unset IFS
   [[ ${#NEWPATH} ]] && PATH=${NEWPATH:1}:${PATH}
 }
 
 function in_path {
   local needle=$1
-  local name
-  IFS=:
-    for name in "${PATH[@]}"; do
-        [[ "$name" == "$needle" ]] && unset IFS && return 0
-    done
-  unset IFS
-    return 1
+  local name path_array
+  IFS=: read -r -a path_array <<< "$PATH"
+  for name in "${path_array[@]}"; do
+    [[ "$name" == "$needle" ]] && return 0
+  done
+  return 1
 }
 
 function path_clean {

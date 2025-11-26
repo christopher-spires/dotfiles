@@ -391,13 +391,17 @@ function gaddwt() {
 }
 
 function gsetup() {
-  git rev-parse --abbrev-ref --symbolic-full-name "@{u}"
-  hasUpstream=$?
-  [ $hasUpstream -eq 0 ] && return
-  local remote branch
-  remote="$(git remote)"
-  branch="$(git branch --show-current)"
-  git push -u "$remote" "$branch"
+  local upstream branch
+  upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2> /dev/null )
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  remote=$(git remote)
+  [[ "$upstream" = "$remote/$branch" ]] && return
+  if git ls-remote --exit-code --heads "$remote" "$branch" &> /dev/null; then
+    git branch --set-upstream-to="$remote/$branch"
+  else 
+    git push -u "$remote" "$branch"
+  fi
+  
 }
 
 function grepo() {

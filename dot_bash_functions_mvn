@@ -190,5 +190,6 @@ function selectmvn() {
 }
 
 MAVEN_HOME=/opt/maven/maven
-PATH=$MAVEN_HOME/bin:$PATH
+MAVEN_BIN="$MAVEN_HOME/bin"
+in_path $MAVEN_BIN || path_prepend $MAVEN_HOME/bin
 export PATH
