@@ -37,10 +37,27 @@ function gclone() {
     fi
   done
 
+  if [ "${#args[@]}" -eq 0 ]; then
+    >&2 echo "Usage: gclone <repository> [<directory>]"
+    return 1
+  fi
+
+  # https://git.homeoffice.anfcorp.com/StoresIntegration/spring-cloud-config
+  # git@git.homeoffice.anfcorp.com:StoresIntegration/spring-cloud-config.git
+  if [[ "${args[0]}" =~ ^https://([^/]+)/(.+)$ ]]; then
+    # Extract host and path
+    local host="${BASH_REMATCH[1]}"
+    local path="${BASH_REMATCH[2]}"
+    args[0]="git@${host}:${path}"
+  fi
+
   if [ "${#args[@]}" -eq 1 ]; then
     repo="${args[0]}"
-    dir="$(basename "$repo" .git)"
-  elif [ "${#args[@]}" -ge 2 ]; then
+    dir="${repo##*/}"
+    dir="${dir%.git}"
+    dir="${dir%-java}"
+    dir="${dir#anf-}"
+  else
     repo="${args[0]}"
     dir="${args[1]}"
   fi
@@ -93,79 +110,14 @@ function gwt() { git worktree "$@"; }
 ___git_complete gwt _git_worktree
 function gwtl() { git worktree list "$@"; }
 
-function gwtch() {
-  echo "git worktree clear history: remove worktree from git ls listing" > /dev/null
-  local wt="$1"
-  local topDir
-  topDir=$(git rev-parse --show-toplevel)
-  if [ -f "${topDir}/.git" ]; then topDir=$(realpath "$topDir/.."); fi
-  ignoreFile="$topDir/.git/info/exclude"
-  if git check-ignore "$wt" > /dev/null; then
-    # echo "cleaning: $wt"
-    sed -i "/^${wt}$/d" "$ignoreFile"
-  fi
-}
-
 function gwtr() {
   # git worktree remove
   local args=("$@")
-  for arg in "${args[@]}"; do
-    case $arg in
-     -f | --force) :
-     ;;
-     *)
-     gwtch "$arg"
-    esac
-  done
+  local topDir
+  topDir=$(git rev-parse --git-common-dir)/..
   git worktree remove "$@";
-  [[ ! -d $PWD ]] && cd ..
-}
-
-function ghide() {
-  local toplevel ignoreFile directory relativeDirectory
-  toplevel="$(git rev-parse --show-toplevel)" > /dev/null || return 1
-  ignoreFile="${toplevel}/.git/info/exclude"
-  directory=$*
-  relativeDirectory=$(realpath --relative-to="$toplevel" "$toplevel/$directory")
-  if [ -d "$toplevel/$relativeDirectory" ]; then
-    if git check-ignore "$relativeDirectory" > /dev/null; then
-      >&2 echo "directory is already ignored: $directory"
-    else
-      echo "$relativeDirectory" >> "$ignoreFile"
-    fi
-  else
-    echo "not a directory at $toplevel: $directory"
-  fi
-
-}
-
-function gwthwt() {
-  echo "git worktree hide worktrees: hide worktrees folder from git listing" > /dev/null
-  local allWorktrees ignoreFile
-  allWorktrees=$(git worktree list --porcelain)
-  
-  if [ "${#allWorktrees}" -le 0 ]; then return 0; fi
-  toplevel="$(git rev-parse --show-toplevel)"
-  ignoreFile="${toplevel}/.git/info/exclude"
-  
-  while read -r line; do
-    key=${line% *}
-    case $key in
-      worktree*)
-        wtPath=${line#* }
-        if [ "$wtPath" == "$toplevel" ]; then continue; fi
-        # wt=$( echo "$wtPath" | xargs basename)
-        wt=${wtPath##*/}
-        if ! git check-ignore "$wt" > /dev/null; then
-          echo "hiding: $wt"
-          echo "$wt" >> "$ignoreFile"
-        fi
-      ;;
-      *)
-        # echo "ignoring others"
-      ;;
-    esac      
-  done <<< "${allWorktrees[@]}"
+  [[ -d $PWD ]] && return 
+  cd "$topDir" || return $?
 }
 
 function gwtcd() {
@@ -354,10 +306,11 @@ function gwta() {
     # && >&2 echo "branch $branch exists" \
     # && createBranch=
     # git worktree add "$branch" $createBranch "$branch" "$@";
-    local top
+    local top remote
     top=$(git rev-parse --git-common-dir)/..
     branch_flag=-b
-    if git rev-parse --verify --quiet "$branch"; then
+    remote=$(git remote)
+    if git ls-remote --heads "$remote" "$branch" > /dev/null; then
       branch_flag=
     fi
     git worktree add "$top/$branch" $branch_flag "$branch" "$@";
@@ -372,22 +325,11 @@ function gaddwt() {
     && echo -e "\t3. Tracks that branch." \
     && return 1
       
-  # git rev-parse --quiet --verify "$1" > /dev/null \
-  #   && echo "branch $1 exists" \
-  #   && return 2
-  # git branch -c "$1" \
-  #   && 
     gwta "$1" || return 1
     local top
     top=$(git rev-parse --git-common-dir)/..
     cd "$top/$1" || return 2
     gwtrel || return 3
-    # [ ! -f ./pom.xml ] && [ -f ../pom.xml ] && cp ../pom.xml .
-    # if [ -f ./pom.xml ]; then
-    #   mkdir -p .mvn || return 4
-    #  branch="$(git branch --show-current)" || return 5
-    #   printf -- "-Drevision=%s-SNAPSHOT" "${branch}" >> .mvn/maven.config
-    # fi
 }
 
 function gsetup() {

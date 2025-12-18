@@ -18,7 +18,13 @@ export JAVA_HOME=$JAVA_25_HOME
 JAVA_BIN="$JAVA_HOME/bin"
 in_path $JAVA_BIN || path_prepend "${JAVA_BIN}"
 
-export JAVA_TOOL_OPTIONS="--enable-native-access=ALL-UNNAMED"
+export OPENSHIFT_HOME="/opt/openshift"
+in_path $OPENSHIFT_HOME || path_prepend "${OPENSHIFT_HOME}"
+
+export DOT_LOCAL_BIN="/home/cspire/.local/bin"
+in_path $DOT_LOCAL_BIN || path_prepend "${DOT_LOCAL_BIN}"
+
+# export JAVA_TOOL_OPTIONS="--enable-native-access=ALL-UNNAMED"
 export JAVA_8_HOME JAVA_17_HOME JAVA_21_HOME JAVA_25_HOME 
 
 

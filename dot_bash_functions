@@ -404,7 +404,7 @@ createCharts() {
     # Extract environment name from filename (values-<env>.yaml)
     local name="${file##*/values-}"
     name="${name%.yaml}"
-    helm template /git/anf/template/master/charts ${values_arg:+-f} $values_arg -f charts/values-$name.yaml > "$output_dir/$prefix$name.yaml"
+    helm template /git/anf/template/master/charts ${values_arg:+-f} $values_arg -f "charts/values-$name.yaml" > "$output_dir/$prefix$name.yaml"
   done
 }
 
@@ -569,7 +569,7 @@ mergeMetadata() {
   # Find all JSON files in the destination_dir
   local files
   shopt -s nullglob
-  files=($(ls "${destination_dir}/additional-spring-configuration-metadata"*.json))
+  mapfile -t files < <(ls "${destination_dir}/additional-spring-configuration-metadata"*.json 2> /dev/null)
   shopt -u nullglob
   >&2 echo "files:" "${files[@]}"
 

@@ -16,10 +16,13 @@ disabled = true
 truncation_length = 9
 truncate_to_repo = false
 use_os_path_sep = false
+before_repo_root_style = "bold yellow"
+repo_root_style = "green"
 style = "yellow"
-repo_root_style = "bold yellow"
-# before_repo_root_style = ""
+truncation_symbol = "..."
 # repo_root_format= '[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) '
+repo_root_format = '[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) '
+substitutions = { "/git/anf/" = ""}
 
 [git_branch]
 # disabled = true
