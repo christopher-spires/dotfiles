@@ -14,14 +14,52 @@ function gco() { git checkout "$@"; }
 ___git_complete gco _git_checkout
 function gcommit() { git commit "$@"; }
 ___git_complete gcommit _git_commit
+function prependJiraToMessage() {
+  local msg="$1"
+  if [[ ! "$msg" =~ ^[A-Z]+-[0-9]+ ]]; then
+      if declare -f jiraTicket > /dev/null; then
+        jira_ticket=$(jiraTicket) || {
+          >&2 echo "Could not discover jira ticket"
+        }
+        if [[ -n "$jira_ticket" ]]; then
+          >&2 echo -n "Prepend Jira ticket '$jira_ticket' to commit message? [Y/n]: "
+          read -r answer
+          answer=${answer:-Y}
+          if [[ "$answer" =~ ^[Yy]$ ]]; then
+            msg="$jira_ticket $msg"
+          fi
+        fi
+      fi
+    fi
+    echo "$msg"
+}
+
 function gcm() { 
-  local args
-  if [ "$#" -eq 1 ]; then
-    args=('-m')
+  local args msg
+  if [ "${1:0:1}" != "-" ]; then
+    msg="$1"
+    shift;
+    args=('-m' "$(prependJiraToMessage "$msg")")
+  else
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        -m|--message)
+          msg="$2"
+          args+=("$1" "$(prependJiraToMessage "$msg")")
+          shift 2
+          break
+          ;;
+        *)
+          args+=("$1")
+          ;;
+      esac
+      shift
+    done
   fi
   args+=("$@")
-  git commit "${args[@]}"; 
+  git commit "${args[@]}";
 }
+
 ___git_complete gcm _git_commit
 
 function gclone() { 
