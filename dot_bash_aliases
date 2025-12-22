@@ -42,3 +42,5 @@ alias ls='ls -h --file-type --color=auto'     # classify files in colour
 alias la='ls -A'                              # all but . and ..
 
 
+alias js=jiraSummary
+alias ju=jiraUrl

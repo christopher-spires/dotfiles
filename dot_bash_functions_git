@@ -240,28 +240,20 @@ function cdwt() {
         break
         ;;
       r)
-        # shellcheck disable=SC2119
-        mapfile -t whyNot < <(cd "${keyValue[$selectedBranch]}" || exit 5; glsm; glso;)
-        if [ "${#whyNot[@]}" -eq 2 ] && [ "${whyNot[*]}" == ".mvn/maven.config pom.xml" ]; then
-          rm "${keyValue[$selectedBranch]}/pom.xml";
-          rm "${keyValue[$selectedBranch]}/.mvn/maven.config";
-        fi;
         if ! gwtr "${keyValue[$selectedBranch]}"; then
           cd "${keyValue[$selectedBranch]}" || return 4
           echo "-------- modified"
-          # shellcheck disable=SC2119
           glsm
           echo "-------- other"
-          # shellcheck disable=SC2119
           glso
           echo "--------"
           echo 'find . -name '\''*.orig'\'' -delete'
-          # echo "gwtr '$selectedBranch' --force";
           echo "gwtr '${keyValue[$selectedBranch]##*/}' --force";
           break; 
         fi
         if [ "$selectedBranch" = "$currentbranch" ]; then
-          cd "${keyValue['master']}" || exit 8
+          local master="${keyValue['master']}"
+          [[ -d "$master" ]] && { cd "$master" || return 8; }
         fi
         ;;
       *)
@@ -310,46 +302,24 @@ function gwtabs() {
   echo "gitdir: $repository_target" > "$worktree_target/.git"
 }
 
-function gabwt() {
-  if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "Usage: gabwt <branch-type> <branch-name>"
-    return 1
-  fi
-
-  local branch_type="$1"
-  local branch_name="$2"
-  local full_branch_name="${branch_type}/${branch_name}"
-  local branch_folder="branches/${full_branch_name}"
-
-  # Create the branch folder if it doesn't exist
-  mkdir -p "$branch_folder"
-
-  # Create the new branch and set up the worktree
-  git worktree add "$branch_folder" -b "$full_branch_name"
-
-  echo "Branch '$full_branch_name' created with folder '$branch_folder'."
-# Example usage:
-# gwtadd feature my-awesome-feature
-}
-
-# function gwta() { git worktree add "$@" && gwthwt; }
-# function gwta() { git worktree add "$@"; }
 function gwta() {
     local branch=$1
     shift
-    # local createBranch='-b'
-    # local remote
-    # remote=$(git remote)
-    # git rev-parse --quiet --verify "$branch" > /dev/null \
-    # && >&2 echo "branch $branch exists" \
-    # && createBranch=
-    # git worktree add "$branch" $createBranch "$branch" "$@";
     local top remote
     top=$(git rev-parse --git-common-dir)/..
     branch_flag=-b
     remote=$(git remote)
-    if git ls-remote --heads "$remote" "$branch" > /dev/null; then
-      branch_flag=
+    # local | remote | flag
+    #  true    true     none
+    #  true    false    none
+    #  false   true     none
+    #  false   false    -b
+    if git show-ref --verify --quiet refs/heads/"$branch"; then
+      # branch exist locally
+      unset branch_flag
+    elif git ls-remote --exit-code --heads "$remote" "$branch" > /dev/null; then
+      # branch exists remotely and local doesn't exist
+      unset branch_flag
     fi
     git worktree add "$top/$branch" $branch_flag "$branch" "$@";
 }
@@ -387,5 +357,11 @@ function gsetup() {
 function grepo() {
   local remote
   remote="$(git remote)"
-  git remote get-url "$remote" | sed -e 's#:#/#' -e 's#git@#https://#' -e 's#.git$##'
+  # git remote get-url "$remote" | sed -e 's#:#/#' -e 's#git@#https://#' -e 's#.git$##'
+  local url
+  url=$(git remote get-url "$remote")
+  url=${url/:/\/}
+  url=${url/git@/https://}
+  url=${url%.git}
+  echo "$url"
 }
