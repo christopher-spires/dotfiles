@@ -29,12 +29,16 @@ export JAVA_8_HOME JAVA_17_HOME JAVA_21_HOME JAVA_25_HOME
 
 
 # remove windows adoptium from path if it exists
+nullglob_shopt_state=$(shopt -q nullglob; echo $?)
 shopt -s nullglob
 adoptium_dirs=(/c/Program\ Files/Eclipse\ Adoptium/*/bin)
-shopt -u nullglob
+[[ "$nullglob_shopt_state" -eq 1 ]] && shopt -u nullglob
+unset nullglob_shopt_state
 
 for dir in "${adoptium_dirs[@]}"; do
   # Remove trailing slash if present
   dir="${dir%/}"
   in_path "$dir" && path_remove "$dir"
 done
+
+export PODMAN_IGNORE_CGROUPSV1_WARNING=
