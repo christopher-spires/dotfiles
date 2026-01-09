@@ -51,6 +51,15 @@ shopt -s histappend
 # expansion when performing filename completion
 shopt -s direxpand
 
+# When a command name that is the name of a directory execute
+# as if it were the argument to the cd command.
+shopt -s autocd
+
+# Bash replaces directory names with the results of word expansion
+# when performing filename completion. This changes the contents of
+# the Readline editing buffer.
+shopt -s dirspell
+
 # Programmable completion enhancements are enabled via
 # /etc/profile.d/bash_completion.sh when the package bash_completetion
 # is installed.  Any completions you add in ~/.bash_completion are

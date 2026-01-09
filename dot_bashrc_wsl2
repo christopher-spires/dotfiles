@@ -27,7 +27,6 @@ in_path $DOT_LOCAL_BIN || path_prepend "${DOT_LOCAL_BIN}"
 # export JAVA_TOOL_OPTIONS="--enable-native-access=ALL-UNNAMED"
 export JAVA_8_HOME JAVA_17_HOME JAVA_21_HOME JAVA_25_HOME 
 
-
 # remove windows adoptium from path if it exists
 nullglob_shopt_state=$(shopt -q nullglob; echo $?)
 shopt -s nullglob

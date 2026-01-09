@@ -263,8 +263,13 @@ function selectjdk() {
   local DEV_DIR=/c/dev
   local JAVA_DIR="$DEV_DIR/Java"
   local JDKS JDK_CURRENT JDK_INDEX
+
+  local nullglob_shopt_state
+  nullglob_shopt_state=$(shopt -q nullglob; echo $?)
   shopt -s nullglob
   JDKS=( "$JAVA_DIR/"*jdk* )
+  [[ "$nullglob_shopt_state" -eq 1 ]] && shopt -u nullglob
+
   JDKS=( "${JDKS[@]##*/}" )
   local java_symlink="$JAVA_DIR/home"
   [ -h "$java_symlink" ] && [ -e "$java_symlink" ] && JDK_CURRENT=$(readlink "$java_symlink")
@@ -379,9 +384,13 @@ ij() {
 
 createCharts() {
   local usage="Usage $0 [prefix]"
+
+  local nullglob_shopt_state
+  nullglob_shopt_state=$(shopt -q nullglob; echo $?)
   shopt -s nullglob
   local values_files=(charts/values-*.yaml)
-  shopt -u nullglob
+  [[ "$nullglob_shopt_state" -eq 1 ]] && shopt -u nullglob
+
   if [[ ${#values_files[@]} -eq 0 ]]; then
     echo "No values files found. Exiting."
     return 1
@@ -449,10 +458,15 @@ compareCharts() {
   if [[ -z "$name_prefix" ]]; then
     name_prefix="$otherPrefix"
   fi
+
   echo "name_prefix ${name_prefix}"
+
+  local nullglob_shopt_state
+  nullglob_shopt_state=$(shopt -q nullglob; echo $?)
   shopt -s nullglob
   files=("$output_dir/${name_prefix}"*".yaml")
-  shopt -u nullglob
+  [[ "$nullglob_shopt_state" -eq 1 ]] && shopt -u nullglob
+
   echo "files: ${files[*]}"
   for file in "${files[@]}"; do
     # Extract environment name from filename
@@ -569,9 +583,13 @@ mergeMetadata() {
 
   # Find all JSON files in the destination_dir
   local files
+
+  local nullglob_shopt_state
+  nullglob_shopt_state=$(shopt -q nullglob; echo $?)
   shopt -s nullglob
   mapfile -t files < <(ls "${destination_dir}/additional-spring-configuration-metadata"*.json 2> /dev/null)
-  shopt -u nullglob
+  [[ "$nullglob_shopt_state" -eq 1 ]] && shopt -u nullglob
+
   >&2 echo "files:" "${files[@]}"
 
   jq -s '
