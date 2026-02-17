@@ -25,6 +25,7 @@ command_not_found_handle() {
 }
 
 function idea() {
+  [[ -e pom.xml ]] && 
   local dist="$HOME/.cache/JetBrains/RemoteDev/dist"
   local ij
   ij=$(jetbrains) || return $?
@@ -35,6 +36,9 @@ function idea() {
     echo "Executable not found: $exe_path" >&2
     return 2
   fi
+  [[ -e pom.xml ]] && [[ ! -e .idea/.name ]] && {
+    projectName=$(xmllint --xpath '/*[local-name()="project"]/*[local-name()="artifactId"]/text()' pom.xml) && mkdir -p .idea && echo "$projectName" > .idea/.name;
+  }
 
   "$exe_path" "$@"
 }

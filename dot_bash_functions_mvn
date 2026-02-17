@@ -168,9 +168,12 @@ function selectmvn() {
   local MAVEN_DIR="$OPT_DIR/maven"
   local mvn_symlink="$MAVEN_DIR/maven"
   local MAVENS mvn MVN_CURRENT
+
+  local nullglob_shopt_state
+  nullglob_shopt_state=$(shopt -q nullglob; echo $?)
   shopt -s nullglob
-  
   mapfile -t MAVENS < <(find $MAVEN_DIR -maxdepth 1 -name 'apache-maven-*' -type d -exec basename {} \;)
+  [[ "$nullglob_shopt_state" -eq 1 ]] && shopt -u nullglob
 
   [ -h "$mvn_symlink" ] && [ -e "$mvn_symlink" ] && MVN_CURRENT=$(readlink "$mvn_symlink")
   local MVN_INDEX=1

@@ -19,12 +19,15 @@ function dodiff() {
   fi
   local from=$source/$file
   local to=$dest/$file
-  echo 
   if ! diff -q "$from" "$to"; then
-    echo "diff: diff '$from' '$to'";
-    echo "update: cp '$from' '$to'";
+    echo -e "diff '$from' '$to'";
+    echo -e "cp '$from' '$to'";
+    echo 
   fi
 }
+
+
+if type wslpath &> /dev/null; then unixpath=wslpath; else unixpath=cygpath; fi
 
 curl -s https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash -o $latest_dir/git-completion.bash
 curl -s https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh -o $latest_dir/.git-prompt.sh
@@ -32,13 +35,13 @@ curl -s https://raw.githubusercontent.com/juven/maven-bash-completion/master/bas
 curl -s https://raw.githubusercontent.com/Azure/azure-cli/dev/az.completion -o $latest_dir/az.completion.bash
 curl -sLA gradle-completion https://edub.me/gradle-completion-bash -o $latest_dir/$gradle_completion_file
 chezmoi completion bash > $latest_dir/chezmoi-completion.bash
-podman completion -f "$(cygpath -m $latest_dir/$podman_completion_file)" bash
+podman completion -f "$latest_dir/$podman_completion_file" bash
 
 gawk -i inplace '
     {
         print
-        if ($0 ~ /^\s*complete.*podman.exe$/) {
-            gsub(/ podman.exe/, " docker")
+        if ($0 ~ /^\s*complete.*podman$/) {
+            gsub(/ podman/, " docker")
             print
         }
     }
@@ -70,4 +73,4 @@ dodiff chezmoi-completion.bash
 dodiff $maven_completion_file
 dodiff $gradle_completion_file
 dodiff $podman_completion_file
-
+dodiff az.completion.bash

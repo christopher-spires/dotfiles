@@ -60,6 +60,11 @@ shopt -s autocd
 # the Readline editing buffer.
 shopt -s dirspell
 
+# the pattern ‘**’ used in a filename expansion context will match
+# all files and zero or more directories and subdirectories. If the
+# pattern is followed by a ‘/’, only directories and subdirectories match.
+shopt -s globstar
+
 # Programmable completion enhancements are enabled via
 # /etc/profile.d/bash_completion.sh when the package bash_completetion
 # is installed.  Any completions you add in ~/.bash_completion are

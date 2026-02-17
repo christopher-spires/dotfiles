@@ -356,7 +356,7 @@ function gsetup() {
 
 function grepo() {
   local remote
-  remote="$(git remote)"
+  remote="$(git remote)" || return 1
   # git remote get-url "$remote" | sed -e 's#:#/#' -e 's#git@#https://#' -e 's#.git$##'
   local url
   url=$(git remote get-url "$remote")
@@ -365,3 +365,7 @@ function grepo() {
   url=${url%.git}
   echo "$url"
 }
+
+function gl1() { git log --oneline "$@"; }
+___git_complete gl1 _git_log
+
