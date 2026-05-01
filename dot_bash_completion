@@ -1,6 +1,13 @@
 #!/bin/bash
 _backup_glob='@(#*#|*@(~|.@(bak|orig|rej|swp|dpkg*|rpm@(orig|new|save))))'
 compat_dir=~/.bash_completion.d
+brew_dir=/home/linuxbrew/.linuxbrew/etc/bash_completion.d
+if [[ -d $brew_dir && -r $brew_dir && -x $brew_dir ]]; then
+  for i in "$brew_dir"/*; do
+    # shellcheck disable=SC1090
+    [[ ${i##*/} != @($_backup_glob|Makefile*) && -f $i && -r $i ]] && . "$i"
+  done
+fi
 if [[ -d $compat_dir && -r $compat_dir && -x $compat_dir ]]; then
   for i in "$compat_dir"/*; do
     # shellcheck disable=SC1090

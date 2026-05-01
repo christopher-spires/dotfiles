@@ -1,10 +1,13 @@
 #!/bin/bash
 
+source_file "${HOME}/.bash_functions_anf"
+source_file "${HOME}/.bash_functions_azure"
 source_file "${HOME}/.bash_functions_cd"
 source_file "${HOME}/.bash_functions_git"
+source_file "${HOME}/.bash_functions_gradle"
 source_file "${HOME}/.bash_functions_jira"
 source_file "${HOME}/.bash_functions_mvn"
-source_file "${HOME}/.bash_functions_gradle"
+source_file "${HOME}/.bash_functions_spring"
 source_file "${HOME}/.bash_functions_vagrant"
 
 function bash_prompt() {

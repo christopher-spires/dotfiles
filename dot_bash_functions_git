@@ -355,7 +355,8 @@ function gsetup() {
 }
 
 function grepo() {
-  local remote
+  local remote url
+  local opt="$1"
   remote="$(git remote)" || return 1
   # git remote get-url "$remote" | sed -e 's#:#/#' -e 's#git@#https://#' -e 's#.git$##'
   local url
@@ -363,6 +364,14 @@ function grepo() {
   url=${url/:/\/}
   url=${url/git@/https://}
   url=${url%.git}
+  case "$opt" in
+    b) url="$url/-/branches";;
+    m|mr) url="$url/-/merge_requests";;
+    j) url="$url/-/jobs";;
+    p) url="$url/-/pipelines";;
+    r) url="$url/-/tree/master";; # should probably get the default branch instead of hardcoding master
+    s) url="$url/-/edit";; # settings
+  esac
   echo "$url"
 }
 

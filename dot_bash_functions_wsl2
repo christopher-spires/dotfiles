@@ -24,8 +24,7 @@ command_not_found_handle() {
   fi
 }
 
-function idea() {
-  [[ -e pom.xml ]] && 
+idea() {
   local dist="$HOME/.cache/JetBrains/RemoteDev/dist"
   local ij
   ij=$(jetbrains) || return $?
@@ -43,7 +42,7 @@ function idea() {
   "$exe_path" "$@"
 }
 
-function remote-dev-server() {
+remote-dev-server() {
   local dist="$HOME/.cache/JetBrains/RemoteDev/dist"
   local ij
   ij=$(jetbrains) || return $?
@@ -82,13 +81,17 @@ jetbrains() {
 }
 
 j8() {
-  JAVA_HOME=$JAVA_8_HOME "$@"
+  JAVA_HOME="$JAVA_8_HOME" PATH="$JAVA_8_HOME/bin:$PATH" "$@"
 }
 
 j17() {
-  JAVA_HOME=$JAVA_17_HOME "$@"
+  JAVA_HOME="$JAVA_17_HOME" PATH="$JAVA_17_HOME/bin:$PATH" "$@"
 } 
 
 j21() {
-  JAVA_HOME=$JAVA_21_HOME "$@"
-} 
+  JAVA_HOME="$JAVA_21_HOME" PATH="$JAVA_21_HOME/bin:$PATH" "$@"
+}
+
+j25() {
+  JAVA_HOME="$JAVA_25_HOME" PATH="$JAVA_25_HOME/bin:$PATH" "$@"
+}

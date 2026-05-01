@@ -278,3 +278,8 @@ function set_starship_windows_title() {
   fi
   echo -ne "\033]0;$title\007"
 }
+
+# type -p brew 2> /dev/null && eval "$(brew shellenv)"
+[[ -x /bin/brew ]] && eval "$(/bin/brew shellenv)"
+
+[[ -x /home/linuxbrew/.linuxbrew/bin/brew ]] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
