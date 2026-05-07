@@ -1,0 +1,76 @@
+#!/bin/bash
+
+source "$HOME/.config/jira.properties" || {
+  >&2 echo "Could not source jira.properties file"
+  return 1
+}
+
+jiraTicket() {
+  local branch
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return $?
+  # Extract the JIRA ticket (e.g., ABCD-1234) from the branch name
+  local ticket
+  ticket=$(grep -oE '[A-Z]+-[0-9]+' <<< "$branch") || return $?
+  if [[ -z "$ticket" ]]; then
+    >&2 echo "No JIRA ticket found in branch name: $branch" 
+    return 1
+  fi
+  echo "$ticket"
+}
+
+jiraUrl() {
+  local ticket=$1
+  if [[ -z "$ticket" ]]; then 
+    ticket=$(jiraTicket) || {
+      >&2 echo "Could not discover jira ticket"
+      return 1
+    }
+  fi
+  echo "https://$JIRA_HOST/browse/$ticket"
+}
+
+jiraTitle() {
+  local ticket=$1
+  json=$(jiraTicketQuery "$ticket") || return $?
+  jq -r '.fields.summary' <<< "$json"
+}
+
+jiraAssignee() {
+  local ticket=$1
+  json=$(jiraTicketQuery "$ticket") || return $?
+  jq -r '.fields.assignee.displayName' <<< "$json"
+}
+
+jiraStatus() {
+  local ticket=$1
+  json=$(jiraTicketQuery "$ticket") || return $?
+  jq -r '.fields.status.name' <<< "$json"
+}
+
+jiraSummary() {
+  local ticket=$1
+  if [[ -z "$ticket" ]]; then 
+    ticket=$(jiraTicket) || {
+      >&2 echo "Could not discover jira ticket"
+      return 1
+    }
+  fi  
+  json=$(jiraTicketQuery "$ticket") || return $?
+  jq -r '"Title:    " + .fields.summary, "Assignee: " + .fields.assignee.displayName, "Status:   " + .fields.status.name' <<< "$json"
+  jiraUrl "$ticket"
+}
+
+jiraTicketQuery() {
+  local ticket=$1
+  if [[ -z "$ticket" ]]; then 
+   ticket=$(jiraTicket) || {
+      >&2 echo "Could not discover jira ticket"
+      return 1
+    }
+  fi
+  if [[ -z "$ticket" ]]; then
+    >&2 echo "No JIRA ticket found in branch name: $branch" 
+    return 1
+  fi
+  curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" "https://$JIRA_HOST/rest/api/3/issue/$ticket" 
+}

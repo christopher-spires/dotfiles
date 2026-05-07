@@ -1,0 +1,200 @@
+#!/bin/bash
+
+# function gc()   { g c "$@"; }
+# function gb()   { g b "$@"; } conflict with git branch
+function gcb()  { g cb "$@"; }
+
+function g_usage_commands() {
+cat <<EOF
+g [bcdhHmqtwx] [options] [<task(s)>]
+  b build
+  c clean
+  d dependency:
+    l dependencies (list) - Displays all dependencies declared in the project
+    i dependencyInsight  - Displays the insight into a specific dependency in the project.
+    m dependencyManagement  - Displays the dependency management declared in the project.  
+  h help - Displays this help/usage information.
+  H help - Displays gradle help.
+  i idea - Generates IDEA project files.
+  j jacocoTestReport - Generates a JaCoCo test report.
+  l lint - Runs the lint task in the project.
+  m warning-mode:
+    a - all
+    f - fail
+    s - summary (default)
+    n - none
+  q quiet - Suppresses the output of the build.
+  r bootRun - Runs the spring boot application.
+  s skip test - Skips the test task in the build. (-x test)
+  t test - Runs the tests in the project.
+  T tasks - Displays the tasks available in the project.
+  u refresh-dependencies - update dependencies.
+  w wrapper - Generates the Gradle wrapper files or other wrapper tasks.
+  x debug - Runs gradle in debug mode.
+EOF
+}
+
+function g_command() {
+  local wrapper="./gradlew"
+  local gradle=gradle
+  [[ -e "$wrapper" ]] && gradle="$wrapper"
+  echo $gradle
+}
+
+function g_usage_options() {
+  gradle -h help
+}
+
+function g_usage() {
+  g_usage_commands
+  g_usage_options
+}
+
+function g() {
+  local commands=$1
+  local numCommands=${#commands}
+  local COMMAND
+  local PASSTHROUGH=false
+  local WARNING_MODE="--warning-mode"
+  local previousCommands
+  local j_command
+  # set -x
+  [[ $numCommands -eq 0 ]] && g_usage_commands && return;
+
+  for (( i=0; i < numCommands; i++ )); do
+    local nextCommand=${commands:$i:1}
+    if [[ "$previousCommands" =~ .*"$nextCommand".* ]]; then PASSTHROUGH=true; fi
+    if [ "$PASSTHROUGH" = true ]; then break; fi
+    if [[ "$previousCommands" != "d" ]]; then previousCommands=${previousCommands}${nextCommand}; fi
+    case "${commands:$i:1}" in
+      -) ((i++))
+         case "${commands:$i:1}" in
+         -) shift 1 && PASSTHROUGH=true ;;
+         *) PASSTHROUGH=true;;
+         esac
+         ;;
+	    b) COMMAND+=("build") ;;
+      c) COMMAND+=("clean");;
+      d) ((i++))
+         case "${commands:$i:1}" in
+           l) COMMAND+=("dependencies") ;;
+           i) COMMAND+=("dependencyInsight") ;;
+           m) COMMAND+=("dependencyManagement") ;;
+           *) PASSTHROUGH=true ;;
+         esac
+         ;;
+      h) g_usage; return;;
+      H) COMMAND+=("help");;
+      i) COMMAND+=("idea") ;;
+      j) COMMAND+=("jacocoTestReport");
+        >&2 echo "jacocoTestReport default output to ./build/reports/jacoco/test/html/index.html" ;;
+      l) COMMAND+=("lint");;
+      m) ((i++))
+         case "${commands:$i:1}" in
+           a) COMMAND+=("${WARNING_MODE}=all") ;;
+           f) COMMAND+=("${WARNING_MODE}=fail") ;;
+           s) COMMAND+=("${WARNING_MODE}=summary");;
+           n) COMMAND+=("${WARNING_MODE}=none") ;;
+           *) PASSTHROUGH=true ;;
+         esac
+         ;;
+      q) COMMAND+=("--quiet") ;;
+      r) COMMAND+=("bootRun") ;;
+      s) COMMAND+=("-x" "test") ;;
+      t) COMMAND+=("test") ;;
+      T) COMMAND+=("tasks") ;;
+      u) COMMAND+=("--refresh-dependencies");;
+      w) COMMAND+=("wrapper") ;;
+      x) COMMAND+=("--debug") ;;
+      *) PASSTHROUGH=true;;
+    esac
+  done
+  if [ "$PASSTHROUGH" = true ]; then
+    COMMAND=("$@")
+  else
+    shift 1
+    COMMAND+=("$@")
+  fi
+  #set -x
+  j_command=$(g_find_java_function "$(g_map_java_version "$(g_java_version)")")
+  [[ "${#COMMAND[@]}" -gt 0 ]] && COMMAND=("${j_command}" "$(g_command)" "${COMMAND[@]}" )
+  [[ ${#COMMAND} -gt 0 ]] && printf "%s\n" "${COMMAND[*]}"
+  "${COMMAND[@]:-:}"
+  #set +x
+}
+
+# Find all functions matching j# and select the closest greater-or-equal to the given version
+function g_find_java_function() {
+  local version=$1
+  local -a j_funcs
+  local func
+  local func_version
+  local min_version=9999
+  local selected_func=""
+
+  # List all functions matching j[0-9]*
+  mapfile -t j_funcs < <(declare -F | awk '{print $3}' | grep -E '^j[0-9]+$')
+  if [[ ${#j_funcs[@]} -eq 0 ]]; then
+    return 2
+  fi
+
+  for func in "${j_funcs[@]}"; do
+    func_version=${func#j}
+    if [[ $func_version -ge $version && $func_version -lt $min_version ]]; then
+      min_version=$func_version
+      selected_func=$func
+    fi
+  done
+
+  if [[ -n $selected_func ]]; then
+    echo "$selected_func"
+    return 0
+  else
+    return 1
+  fi
+}
+
+function g_map_java_version() {
+  local version=$1
+  if [[ ${#version} -eq 0 ]]; then
+    return 1
+  fi
+  if [[ $version =~ ^1\.([0-9]+)$ ]]; then
+    version="${BASH_REMATCH[1]}"
+  fi
+  echo "$version"
+}
+
+function g_java_version() {
+  file="build.gradle"
+  if [[ ! -f "$file" ]]; then
+    >&2 echo "build.gradle not found in current directory"
+    return 1
+  fi
+  local version
+  # 1. Toolchain pattern
+  version=$(grep -E 'languageVersion\s*=\s*JavaLanguageVersion\.of\([0-9]+' "$file" | \
+      sed -E 's/.*JavaLanguageVersion\.of\(([0-9]+)\).*/\1/' | head -1)
+  if [[ -n "$version" ]]; then
+      echo "$version"
+      return
+  fi
+  # 2. sourceCompatibility as string or number
+  version=$(grep -E 'sourceCompatibility\s*=\s*['\''\"]?[0-9]+['\''"]?' "$file" | \
+      sed -E 's/.*sourceCompatibility\s*=\s*['\''"]?([0-9]+)['\''"]?.*/\1/' | head -1)
+  if [[ -n "$version" ]]; then
+      echo "$version"
+      return
+  fi
+  # 3. sourceCompatibility as JavaVersion.VERSION_XX
+  version=$(grep -E 'sourceCompatibility\s*=\s*JavaVersion\.VERSION_[0-9]+' "$file" | \
+      sed -E 's/.*JavaVersion\.VERSION_([0-9]+).*/\1/' | head -1)
+
+  # Prefer toolchain, then sourceCompatibility, then JavaVersion
+  if [[ -n "$version" ]]; then
+      echo "$version"
+      return
+  fi
+  >&2 echo "Java language version not found"
+
+}
