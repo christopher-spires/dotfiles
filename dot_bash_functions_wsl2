@@ -1,5 +1,5 @@
 #!/bin/bash
-command_not_found_handle() {
+function command_not_found_handle() {
   # inspired somewhat by: https://www.linuxjournal.com/content/bash-command-not-found
   local cmd="$1.exe"
   # ability to run windows command without exe extension
@@ -24,7 +24,7 @@ command_not_found_handle() {
   fi
 }
 
-idea() {
+function idea() {
   local dist="$HOME/.cache/JetBrains/RemoteDev/dist"
   local ij
   ij=$(jetbrains) || return $?
@@ -42,7 +42,7 @@ idea() {
   "$exe_path" "$@"
 }
 
-remote-dev-server() {
+function remote-dev-server() {
   local dist="$HOME/.cache/JetBrains/RemoteDev/dist"
   local ij
   ij=$(jetbrains) || return $?
@@ -58,7 +58,7 @@ remote-dev-server() {
 }
 
 
-jetbrains() {
+function jetbrains() {
   local dist="$HOME/.cache/JetBrains/RemoteDev/dist"
   local jetbrains
 
@@ -86,7 +86,7 @@ j8() {
 
 j17() {
   JAVA_HOME="$JAVA_17_HOME" PATH="$JAVA_17_HOME/bin:$PATH" "$@"
-} 
+}
 
 j21() {
   JAVA_HOME="$JAVA_21_HOME" PATH="$JAVA_21_HOME/bin:$PATH" "$@"

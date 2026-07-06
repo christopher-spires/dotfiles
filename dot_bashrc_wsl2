@@ -1,11 +1,25 @@
 #!/bin/bash
-JAVA_8_HOME="/usr/lib/jvm/temurin-8-jdk-amd64"
-JAVA_17_HOME="/usr/lib/jvm/temurin-17-jdk-amd64"
-JAVA_21_HOME="/usr/lib/jvm/temurin-21-jdk-amd64"
-JAVA_25_HOME="/usr/lib/jvm/temurin-25-jdk-amd64"
+
+function setJavaHome() {
+  local version="$1"
+  local JAVA_DIR="temurin-${version}-jdk-amd64"
+  # local JAVA_DIR="java-${version}-openjdk-amd64"
+  export JAVA_${version}_HOME="/usr/lib/jvm/$JAVA_DIR" 
+}
+
+setJavaHome 8
+setJavaHome 17
+setJavaHome 21
+setJavaHome 25
 
 alias cygpath=wslpath
 source_file "${HOME}/.bash_functions_wsl2"
+
+# type -p brew 2> /dev/null && eval "$(brew shellenv)"
+[[ -x /bin/brew ]] && eval "$(/bin/brew shellenv)"
+
+[[ -x /home/linuxbrew/.linuxbrew/bin/brew ]] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
 
 export starship_precmd_user_func="set_starship_windows_title" 
 eval "$(starship init bash)"

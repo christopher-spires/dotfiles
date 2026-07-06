@@ -184,7 +184,7 @@ function gwts() { cdwt; }
 function cdwt() {
   # set -x
   echo "git worktree select: UI to select the existing worktrees with some management options" > /dev/null
-  local wt allWorktrees wt keyValue wtMaxLength branchMaxLength currentbranch
+  local wt allWorktrees wt keyValue wtMaxLength branchMaxLength currentbranch items
   wtMaxLength=0
   branchMaxLength=0
   name="(c)d/[ENTER] | (r)remove | (q)uit"
@@ -230,7 +230,8 @@ function cdwt() {
       fi
     done;
     
-    wt=$(iselect -n "$name" -p $BRANCH_INDEX -kc -kr -K -a -e "$(for branchName in "${sortedBranchName[@]}"; do printf "<s:%s>%-${branchMaxLength}s %s\n" "${branchName}" "${branchName}" "${keyValue[$branchName]}"; done)")
+    mapfile -t items < <(for branchName in "${sortedBranchName[@]}"; do printf "<s:%s>%-${branchMaxLength}s %s\n" "${branchName}" "${branchName}" "${keyValue[$branchName]}"; done)
+    wt=$(iselect -n "$name" -p "$BRANCH_INDEX" -kc -kr -K -a "${items[@]}")
     if [ "${#wt}" -eq 0 ]; then break; fi
     selectedCommand=${wt%:*}
     selectedBranch=${wt#*:}
@@ -378,3 +379,5 @@ function grepo() {
 function gl1() { git log --oneline "$@"; }
 ___git_complete gl1 _git_log
 
+function grs() { git restore --staged "$@"; }
+___git_complete grs _git_restore

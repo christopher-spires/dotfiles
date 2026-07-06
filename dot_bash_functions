@@ -218,19 +218,21 @@ function convert_args() {
   done
 }
 
-function bat() {
-  local _command
-  local _args=("$@")
-  if ! _command=$(which batcat 2> /dev/null); then
-    if ! _command=$(which bat || which bat.exe); then
-      >&2 echo "bat, bat.exe, and batcat not found"
-      return 127
-    else
-      convert_args _args
-    fi
-  fi
-  "${_command}" "${_args[@]}"
-}
+# function bat() {
+#   local _command
+#   local _args=("$@")
+#   if ! _command=$(which bat 2> /dev/null); then
+#     if ! _command=$(which batcat 2> /dev/null); then
+#       if ! _command=$(which bat.exe 2> /dev/null); then
+#         >&2 echo "bat, bat.exe, and batcat not found"
+#         return 127
+#       else
+#         convert_args _args
+#       fi
+#     fi
+#   fi
+#   "${_command}" "${_args[@]}"
+# }
 
 function cm() {
   chezmoi "$@"
@@ -300,6 +302,10 @@ curl() {
   # docker run --rm curlimages/curl:latest "$@"
   # enhancement: look for -o option and if relative/abs path, use that vs PWD
   podman run --rm -it -v "$PWD:/work" -w /work quay.io/curl/curl:latest "$@"
+}
+
+mmdc() {
+  podman run --rm -v "$(pwd)":/data minlag/mermaid-cli "$@"
 }
 
 
