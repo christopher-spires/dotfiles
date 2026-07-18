@@ -41,7 +41,51 @@ ERROR_COLOR="${LIGHT_RED}"
 LIST_COLOR="${LIGHT_GREEN}"
 
 #intellij=/proc/cygdrive/c/Users/$USER/AppData/Local/JetBrains/Toolbox/scripts/idea.cmd
-intellij=$(which idea || /c/Users/$USER/AppData/Local/JetBrains/Toolbox/scripts/idea)
+jetbrains() {
+  local dist="$HOME/.cache/JetBrains/RemoteDev/dist"
+  local jetbrains
+
+  # find:
+  #  -maxdepth 1 to not recurse into subdirs
+  #  -name to only find dirs that match the pattern
+  #  -type d to only find dirs
+  #  -printf '%P\n' to print only the dir name without the path
+  # sort:
+  #  -t splits to 2 groups.
+  #  -k says 2nd group starting with the 1st character.
+  #  -V is symantic version sort
+  jetbrains=$(find "$dist" -maxdepth 1 -name "*_idea*-*" -type d -printf '%P\n' | sort -V -t'-' -k 2.1 | tail -1)
+
+  if [[ -z "$jetbrains" ]]; then
+    echo "No IntelliJ IDEA version found in $dist" >&2
+    return 1
+  fi
+  echo "$jetbrains"
+}
+
+idea() {
+  local dist="$HOME/.cache/JetBrains/RemoteDev/dist"
+  local ij
+  ij=$(jetbrains) || return $?
+
+  local exe_path="$dist/$ij/bin/idea.sh"
+  # local exe_path="$dist/$ij/bin/remote-dev-server.sh"
+  if [[ ! -x "$exe_path" ]]; then
+    echo "Executable not found: $exe_path" >&2
+    return 2
+  fi
+
+  "$exe_path" "$@"
+}
+
+intellij=$(command -v idea || echo "/c/Users/$USER/AppData/Local/JetBrains/Toolbox/scripts/idea")
+
+# if [[ $(type -t idea) == function ]]; then
+#   intellij=idea
+# else
+#   intellij="$(command -v idea || echo "/c/Users/$USER/AppData/Local/JetBrains/Toolbox/scripts/idea")"
+# fi
+
 vscode=code
 
 debug() {
@@ -212,6 +256,7 @@ set_index() {
 }
 
 edit_file() {
+  echo "opening $file in intellij: $intellij $file --line 1"
   "$intellij" "$file" --line 1
 }
 
