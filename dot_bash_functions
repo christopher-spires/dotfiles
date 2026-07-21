@@ -298,11 +298,11 @@ function selectjdk() {
 #   podman run --rm -i -v "$(wslpath -w "${PWD}")":/workdir mikefarah/yq "$@"
 # }
 
-curl() {
-  # docker run --rm curlimages/curl:latest "$@"
-  # enhancement: look for -o option and if relative/abs path, use that vs PWD
-  podman run --rm -it -v "$PWD:/work" -w /work quay.io/curl/curl:latest "$@"
-}
+# curl() {
+#   # docker run --rm curlimages/curl:latest "$@"
+#   # enhancement: look for -o option and if relative/abs path, use that vs PWD
+#   podman run --rm -it -v "$PWD:/work" -w /work quay.io/curl/curl:latest "$@"
+# }
 
 mmdc() {
   podman run --rm -v "$(pwd)":/data minlag/mermaid-cli "$@"
@@ -357,12 +357,12 @@ mmdc() {
 #   podman run --rm -i -v "${workdir}":/workdir -w /workdir mikefarah/yq "$@"
 # }
 
-confluent() {
-  docker run --rm -it \
-    -v "$(cygpath -m "${PWD}")":/workdir \
-    -v "$(cygpath -m "${HOME}")/.confluent":/root/.confluent \
-    confluentinc/confluent-cli:latest confluent "$@"
-}
+# confluent() {
+#   docker run --rm -it \
+#     -v "$(cygpath -m "${PWD}")":/workdir \
+#     -v "$(cygpath -m "${HOME}")/.confluent":/root/.confluent \
+#     confluentinc/confluent-cli:latest confluent "$@"
+# }
 
 setupcygwin() {(
   set -e
