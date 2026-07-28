@@ -127,6 +127,27 @@ function install_java_temurin {
   apt install -y temurin-8-jdk temurin-17-jdk temurin-21-jdk temurin-25-jdk
 }
 
+function install_docker() {
+  [[ "$IS_WSL2" == true ]] || return
+  apt install ca-certificates curl
+
+  # Create directory for keyrings
+  install -m 0755 -d /etc/apt/keyrings
+
+  # Download official GPG key
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+
+  # Add the repository to Apt sources
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null
+  
+  apt update
+  apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+}
+
 ###############################################################################
 function install_java_openjdk {
   apt update -y # update if you haven't already
@@ -379,7 +400,7 @@ function warn {
 function show_install_menu() {
   local selections
   local token
-  local gitVersion pwshVersion deltaVersion mavenVersion gradleVersion starshipVersion javaVersion brewVersion podmanVersion copilotVersion glabVersion yqVersion npmVersion nodeVersion batVersion cursorVersion
+  local gitVersion pwshVersion deltaVersion mavenVersion gradleVersion starshipVersion javaVersion brewVersion podmanVersion copilotVersion glabVersion yqVersion npmVersion nodeVersion batVersion cursorVersion dockerVersion
   gitVersion=$(git --version 2>/dev/null || echo "not installed")
   pwshVersion=$(pwsh --version 2>/dev/null || echo "not installed")
   deltaVersion=$(delta --version 2>/dev/null || echo "not installed")
@@ -397,6 +418,7 @@ function show_install_menu() {
   npmVersion=$(npm --version 2>/dev/null || echo "not installed")
   nodeVersion=$(node --version 2>/dev/null || echo "not installed")
   cursorVersion=$(cursor --version 2>/dev/null || echo "not installed")
+  dockerVersion=$(docker --version 2>/dev/null | head -n 1 || echo "not installed")
 
   declare -A install_options=(
     ["install_pwsh"]="PowerShell ($pwshVersion)"
@@ -415,6 +437,7 @@ function show_install_menu() {
     ["install_yq"]="yq ($yqVersion)"
     ["install_node"]="Node.js (Node=$nodeVersion npm=$npmVersion)"
     ["install_cursor"]="Cursor ($cursorVersion)"
+    ["install_docker"]="Docker ($dockerVersion)"
    # ["install_chezmoi"]="Chezmoi ($chezmoiVersion)"
 
   )
