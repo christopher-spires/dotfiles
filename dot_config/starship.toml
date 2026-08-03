@@ -51,6 +51,9 @@ version_format = "v${major}"
 style = 'red'
 symbol = ""
 
+[maven]
+format ="[$symbol($version )]($style)"
+
 [nodejs]
 disabled = true
 format = "[$symbol($version )]($style)"
