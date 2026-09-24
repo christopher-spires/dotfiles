@@ -341,6 +341,52 @@ function gaddwt() {
     gwtrel || return 3
 }
 
+function gwtm() {
+  local from to common_dir common_parent
+
+  if ! common_dir="$(git rev-parse --git-common-dir 2> /dev/null)"; then
+    >&2 echo "Could not resolve git common dir"
+    return 4
+  fi
+  common_parent=$(realpath -m "$common_dir/..") || return $?
+
+  case "$#" in
+    2)
+      from="$1"
+      to="$2"
+      ;;
+    1)
+      if [ ! -f ./.git ]; then
+        >&2 echo "Single-argument mode requires being inside a linked worktree (.git file)"
+        return 1
+      fi
+      if ! from="$(git rev-parse --show-toplevel 2> /dev/null)"; then
+        >&2 echo "Could not resolve current worktree"
+        return 2
+      fi
+      to="$1"
+      ;;
+    *)
+      echo 1>&2 "usage: ${FUNCNAME[0]} <to>"
+      echo 1>&2 "       ${FUNCNAME[0]} <from> <to>"
+      return 3
+      ;;
+  esac
+
+  if [[ "$from" != /* ]]; then
+    from="$common_parent/$from"
+  fi
+  if [[ "$to" != /* ]]; then
+    to="$common_parent/$to"
+  fi
+
+  from=$(realpath -m "$from") || return $?
+  to=$(realpath -m "$to") || return $?
+
+  git worktree move "$from" "$to" || return $?
+  cd "$to" || return $?
+}
+
 function gsetup() {
   local upstream branch
   upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2> /dev/null )

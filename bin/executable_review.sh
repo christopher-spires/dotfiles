@@ -248,11 +248,29 @@ git_checkout() {
 git_list() {
   debug git_list
   # echo "files=$files"
-  printf '%s\n' "$( list "${files[@]}" )"
+  local file
+  for file in "${files[@]}"; do
+    list "$file"
+  done
+  # printf '%s\n' "$( list "${files[@]}" )"
 }
 
-set_index() {
-  warn not implemented
+goto_file() {
+  debug goto_file
+  [[ file_count -eq 0 ]] && error "no files" && return
+  local choice
+  choice=$(printf '%s\n' "${files[@]}" | iselect -a -t "Go to file" -p $((file_idx + 1)) -P -Q "") || return
+  [[ -z "$choice" ]] && return
+  if [[ "$choice" =~ ^([0-9]+): ]]; then
+    file_idx=$((BASH_REMATCH[1] - 1))
+    if (( file_idx >= 0 && file_idx < file_count )); then
+      set_file
+    else
+      error "invalid selection"
+    fi
+  else
+    error "invalid selection: $choice"
+  fi
 }
 
 edit_file() {
@@ -285,7 +303,7 @@ menu() {
   local _opt
   until [ "$_opt" = "q" ];
   do
-    prompt="(d)iff (s)tyle (o)ptions (a)dd (r)eset (n)ext (p)revious (l)ist (i)ndex (e)dit (v)scode (M)odified (O)ther (C)heckout (q)uit :"
+    prompt="(d)iff (s)tyle (o)ptions (a)dd (r)eset (n)ext (p)revious (l)ist (g)oto (e)dit (v)scode (M)odified (O)ther (C)heckout (q)uit :"
 	# read -r -t 1 -n 10000 discard
 	# while read -r -t 0; do read -n 256 -r -s; done
 	# progress_prompt="$(progress)"
@@ -310,7 +328,7 @@ menu() {
     "n") next_file;;
 	  "p") previous_file;;
     "l") git_list;;
-	  "i") set_index;;
+    "g") goto_file;;
 	  "e") edit_file;;
     "v") edit_file_vscode;;
     "q") quit; break;;
