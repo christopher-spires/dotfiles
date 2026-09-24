@@ -41,6 +41,23 @@ function g_command() {
   echo $gradle
 }
 
+function latestGradle() {
+  local versions_url="https://services.gradle.org/versions/all"
+
+  curl --fail --silent --show-error "$versions_url" |
+    jq -r '
+      map(select(
+        .final == true and
+        (.version | split(".")[0] | tonumber >= 7) and
+        (.version | test("^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"))
+      ))
+      | group_by(.version | split(".")[0] | tonumber)
+      | .[]
+      | max_by(.version | split(".") | map(tonumber))
+      | "\(.version | split(".")[0]).x \(.version)"
+    '
+}
+
 function g_usage_options() {
   gradle -h help
 }
@@ -198,3 +215,4 @@ function g_java_version() {
   >&2 echo "Java language version not found"
 
 }
+
