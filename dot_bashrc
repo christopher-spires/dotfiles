@@ -256,6 +256,8 @@ export DISPLAY=${DISPLAY:-":0.0"}
 export BAT_STYLE=grid,header-filename,snip
 setupdirs
 
+source_file ~/.config/gitlab.conf
+
 if _vagrant_version=$(which vagrant 2> /dev/null && vagrant -v | grep -Po '\d+\.\d+\.\d+'); then
   # shellcheck disable=SC1090
   . "/c/Program Files/Vagrant/embedded/gems/gems/vagrant-${_vagrant_version}/contrib/bash/completion.sh"
